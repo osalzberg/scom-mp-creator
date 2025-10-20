@@ -18,13 +18,13 @@
 .progress-bar::before {
     content: '';
     position: absolute;
-    top: 50%;
-    left: 0;
-    right: 0;
-    height: 3px;
+    top: 25px;
+    left: 16.67%;
+    right: 16.67%;
+    height: 4px;
     background: #e2e8f0;
     z-index: 1;
-    transform: translateY(-50%);
+    border-radius: 2px;
 }
 
 .progress-step {
@@ -34,8 +34,15 @@
     gap: 10px;
     position: relative;
     z-index: 2;
-    background: #f8fafc;
+    background: transparent;
     padding: 0 20px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.progress-step:hover .step-number {
+    transform: scale(1.05);
+    box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
 }
 
 .step-number {
@@ -52,10 +59,31 @@
     transition: all 0.3s ease;
 }
 
-.progress-step.active .step-number,
+.progress-step.active .step-number {
+    background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+    color: white;
+    transform: scale(1.15);
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+}
+
 .progress-step.completed .step-number {
     background: linear-gradient(135deg, #3b82f6, #8b5cf6);
     color: white;
+}
+
+/* Indicate clickable vs non-clickable steps */
+.progress-step.completed,
+.progress-step.active {
+    cursor: pointer;
+}
+
+.progress-step:not(.active):not(.completed) {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.progress-step:not(.active):not(.completed):hover {
+    opacity: 0.8;
 }
 
 .step-label {
@@ -68,6 +96,18 @@
 .progress-step.completed .step-label {
     color: #1e293b;
     font-weight: 600;
+}
+
+/* Animations */
+@keyframes slideIn {
+    from { 
+        opacity: 0; 
+        transform: translateX(100%); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateX(0); 
+    }
 }
 
 /* Creator Form */

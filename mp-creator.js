@@ -19,6 +19,11 @@ class MPCreator {
         
         this.loadFragmentLibrary();
         this.initializeEventListeners();
+        
+        // Initialize progress line on page load
+        setTimeout(() => {
+            this.updateProgressLine();
+        }, 100);
     }
 
     loadFragmentLibrary() {
@@ -544,6 +549,11 @@ Computer: {1}</Description>
             if (e.target.closest('.discovery-card')) {
                 this.selectDiscoveryCard(e.target.closest('.discovery-card'));
             }
+            
+            // Handle step navigation when clicking on progress steps
+            if (e.target.closest('.progress-step')) {
+                this.handleStepNavigation(e.target.closest('.progress-step'));
+            }
         });
 
         document.addEventListener('change', (e) => {
@@ -587,6 +597,65 @@ Computer: {1}</Description>
         if (nextBtn) {
             nextBtn.disabled = false;
         }
+    }
+
+    handleStepNavigation(stepElement) {
+        const targetStep = parseInt(stepElement.dataset.step);
+        
+        // Don't navigate if clicking on the current step
+        if (targetStep === this.currentStep) {
+            return;
+        }
+        
+        // Allow navigation to any previous step (already completed)
+        if (targetStep < this.currentStep) {
+            this.currentStep = targetStep;
+            this.updateStepDisplay();
+            return;
+        }
+        
+        // For forward navigation, validate the current step first
+        if (targetStep === this.currentStep + 1) {
+            if (this.validateCurrentStep()) {
+                this.saveCurrentStepData();
+                this.currentStep = targetStep;
+                this.updateStepDisplay();
+                
+                // Generate configuration forms if navigating to step 6
+                if (this.currentStep === 6) {
+                    this.generateConfigurationForms();
+                }
+            } else {
+                // Show validation message
+                this.showValidationMessage();
+            }
+        }
+    }
+
+    showValidationMessage() {
+        // Create a temporary notification
+        const notification = document.createElement('div');
+        notification.className = 'validation-notification';
+        notification.textContent = 'Please complete the current step before proceeding.';
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #ef4444;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Remove after 3 seconds
+        setTimeout(() => {
+            notification.remove();
+        }, 3000);
     }
 
     handleComponentSelection(checkbox) {
@@ -756,6 +825,9 @@ Computer: {1}</Description>
             step.classList.toggle('active', stepNumber === this.currentStep);
         });
 
+        // Update progress line animation
+        this.updateProgressLine();
+
         this.scrollToCurrentStep();
         
         // Update download buttons if we're on step 6
@@ -764,6 +836,15 @@ Computer: {1}</Description>
                 updateDownloadButtons();
             }, 100);
         }
+    }
+
+    updateProgressLine() {
+        // Progress line functionality removed - line stays grey
+    }
+
+    calculateProgressWidth(currentStep, totalSteps) {
+        // Progress line functionality removed - line stays grey
+        return '0%';
     }
 
     scrollToCurrentStep() {
