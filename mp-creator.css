@@ -13,18 +13,9 @@
     align-items: center;
     margin-bottom: 60px;
     position: relative;
-}
-
-.progress-bar::before {
-    content: '';
-    position: absolute;
-    top: 25px;
-    left: 16.67%;
-    right: 16.67%;
-    height: 4px;
-    background: #e2e8f0;
-    z-index: 1;
-    border-radius: 2px;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
 .progress-step {
@@ -35,9 +26,62 @@
     position: relative;
     z-index: 2;
     background: transparent;
-    padding: 0 20px;
+    padding: 0 6px;
     cursor: pointer;
     transition: all 0.3s ease;
+    flex: 1;
+}
+
+/* Create line segments between steps with gaps around circles */
+.progress-step:not(:last-child)::before {
+    content: '';
+    position: absolute;
+    top: 25px;
+    left: calc(50% + 40px); /* Start 15px after circle (25px radius + 15px gap) */
+    right: calc(-100% + 50% + 40px); /* End 15px before next circle */
+    height: 4px;
+    background: #e2e8f0;
+    z-index: 1;
+    border-radius: 4px;
+    transform-origin: left center;
+    transform: scaleX(1);
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Color the line purple when the step is completed - with animation */
+.progress-step.completed:not(:last-child)::before {
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+    animation: lineSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Animation for lines when going forward */
+@keyframes lineSlideIn {
+    from {
+        transform: scaleX(0);
+        transform-origin: left center;
+    }
+    to {
+        transform: scaleX(1);
+        transform-origin: left center;
+    }
+}
+
+/* Animation for lines when going backward */
+@keyframes lineSlideOut {
+    from {
+        transform: scaleX(1);
+        transform-origin: right center;
+    }
+    to {
+        transform: scaleX(0);
+        transform-origin: right center;
+    }
+}
+
+/* Class to trigger backward animation */
+.progress-step.animating-backward:not(:last-child)::before {
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+    animation: lineSlideOut 0.4s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
 .progress-step:hover .step-number {
@@ -495,13 +539,61 @@
 .component-checkbox input[type="checkbox"]:checked + .checkmark::after {
     content: '';
     position: absolute;
-    left: 6px;
-    top: 2px;
-    width: 6px;
+    left: 50%;
+    top: 50%;
+    width: 5px;
     height: 10px;
     border: solid white;
     border-width: 0 2px 2px 0;
-    transform: rotate(45deg);
+    transform: translate(-50%, -60%) rotate(45deg);
+}
+
+/* Add Another Button */
+.btn-add-another {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 15px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+}
+
+.btn-add-another:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.3);
+    transform: translateY(-1px);
+}
+
+.btn-add-another:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+}
+
+.btn-add-another i {
+    font-size: 0.85rem;
+}
+
+.instance-count {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    margin-left: 8px;
+    padding: 0 8px;
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 12px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    backdrop-filter: blur(10px);
 }
 
 .component-card.selected .component-checkbox {
@@ -565,6 +657,10 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 20px;
+}
+
+.form-group--full-width {
+    grid-column: 1 / -1;
 }
 
 /* Generate Options */

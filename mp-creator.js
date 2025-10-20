@@ -7,7 +7,7 @@ class MPCreator {
             basicInfo: {},
             selectedComponents: {
                 discovery: null,
-                monitors: [],
+                monitors: [],  // Will store objects like {type: 'service-monitor-no-alert', instanceId: 'instance-1'}
                 rules: [],
                 groups: [],
                 tasks: [],
@@ -16,6 +16,7 @@ class MPCreator {
             configurations: {}
         };
         this.fragmentLibrary = {};
+        this.instanceCounters = {};  // Track instance numbers for each monitor type
         
         this.loadFragmentLibrary();
         this.initializeEventListeners();
@@ -178,9 +179,36 @@ class MPCreator {
             },
             'service-monitor-no-alert': {
                 name: 'Service Monitor (No Alert)',
-                template: 'Monitor.Service.NoAlert.mpx',
+                template: `<ManagementPackFragment SchemaVersion="2.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <Monitoring>
+    <Monitors>
+      <UnitMonitor ID="##CompanyID##.##AppName##.##UniqueID##.Service.Monitor" Accessibility="Public" Enabled="true" Target="##ClassID##" ParentMonitorID="Health!System.Health.AvailabilityState" Remotable="true" Priority="Normal" TypeID="Windows!Microsoft.Windows.CheckNTServiceStateMonitorType" ConfirmDelivery="false">
+        <Category>AvailabilityHealth</Category>
+        <OperationalStates>
+          <OperationalState ID="Running" MonitorTypeStateID="Running" HealthState="Success" />
+          <OperationalState ID="NotRunning" MonitorTypeStateID="NotRunning" HealthState="Warning" />
+        </OperationalStates>
+        <Configuration>
+          <ComputerName />
+          <ServiceName>##ServiceName##</ServiceName>
+          <CheckStartupType />
+        </Configuration>
+      </UnitMonitor>
+    </Monitors>
+  </Monitoring>
+  <LanguagePacks>
+    <LanguagePack ID="ENU" IsDefault="true">
+      <DisplayStrings>
+        <DisplayString ElementID="##CompanyID##.##AppName##.##UniqueID##.Service.Monitor">
+          <Name>##CompanyID## ##AppName## ##ServiceName## Service Monitor</Name>
+        </DisplayString>
+      </DisplayStrings>
+    </LanguagePack>
+  </LanguagePacks>
+</ManagementPackFragment>`,
                 fields: [
-                    { id: 'serviceName', label: 'Service Name', type: 'text', required: true, placeholder: 'W3SVC' }
+                    { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'W3SVC' },
+                    { id: 'serviceName', label: 'Service Name', type: 'text', required: true, placeholder: 'W3SVC', help: 'Short name of the service as seen in the registry' }
                 ]
             },
             'performance-monitor': {
@@ -506,10 +534,220 @@ Computer: {1}</Description>
             },
             'powershell-script-monitor': {
                 name: 'PowerShell Script Monitor',
-                template: 'Monitor.TimedScript.PowerShell.NoParams.mpx',
+                template: `<ManagementPackFragment SchemaVersion="2.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <TypeDefinitions>
+    <ModuleTypes>
+      <DataSourceModuleType ID="##CompanyID##.##AppName##.##UniqueID##.Monitor.DataSource" Accessibility="Internal" Batching="false">
+        <Configuration>
+          <xsd:element minOccurs="1" type="xsd:integer" name="IntervalSeconds" xmlns:xsd="http://www.w3.org/2001/XMLSchema" />
+          <xsd:element minOccurs="0" type="xsd:string" name="SyncTime" xmlns:xsd="http://www.w3.org/2001/XMLSchema" />
+          <xsd:element minOccurs="1" type="xsd:integer" name="TimeoutSeconds" xmlns:xsd="http://www.w3.org/2001/XMLSchema" />	
+        </Configuration>
+        <OverrideableParameters>
+          <OverrideableParameter ID="IntervalSeconds" Selector="$Config/IntervalSeconds$" ParameterType="int" />
+          <OverrideableParameter ID="SyncTime" Selector="$Config/SyncTime$" ParameterType="string" />
+          <OverrideableParameter ID="TimeoutSeconds" Selector="$Config/TimeoutSeconds$" ParameterType="int" />
+        </OverrideableParameters>
+        <ModuleImplementation Isolation="Any">
+          <Composite>
+            <MemberModules>
+              <DataSource ID="Scheduler" TypeID="System!System.Scheduler">
+                <Scheduler>
+                  <SimpleReccuringSchedule>
+                    <Interval Unit="Seconds">$Config/IntervalSeconds$</Interval>
+                    <SyncTime>$Config/SyncTime$</SyncTime>
+                  </SimpleReccuringSchedule>
+                  <ExcludeDates />
+                </Scheduler>
+              </DataSource>
+              <ProbeAction ID="PA" TypeID="Windows!Microsoft.Windows.PowerShellPropertyBagTriggerOnlyProbe">
+                <ScriptName>##CompanyID##.##AppName##.##UniqueID##.Monitor.DataSource.ps1</ScriptName>
+                <ScriptBody>
+#=================================================================================
+#  ##CompanyID## ##AppName## ##UniqueID## Monitor
+#
+#  Author: Generated by SCOM MP Creator
+#  v1.0
+#=================================================================================
+
+# Constants section
+#=================================================================================
+$ScriptName = "##CompanyID##.##AppName##.##UniqueID##.Monitor.DataSource.ps1"
+$EventID = "##EventID##"
+#=================================================================================
+
+# Starting Script section
+#=================================================================================
+$StartTime = Get-Date
+$whoami = whoami
+$momapi = New-Object -comObject MOM.ScriptAPI
+$bag = $momapi.CreatePropertyBag()
+$momapi.LogScriptEvent($ScriptName,$EventID,0,"\`n Script is starting. \`n Running as ($whoami).")
+#=================================================================================
+
+# Begin MAIN script section
+#=================================================================================
+##SCRIPT_BODY##
+#=================================================================================
+# End MAIN script section
+
+# Return all bags
+$bag
+
+# End of script section
+#=================================================================================
+$EndTime = Get-Date
+$ScriptTime = ($EndTime - $StartTime).TotalSeconds
+$momapi.LogScriptEvent($ScriptName,$EventID,0,"\`n Script Completed. \`n Script Runtime: ($ScriptTime) seconds.")
+#=================================================================================
+                </ScriptBody>
+                <TimeoutSeconds>$Config/TimeoutSeconds$</TimeoutSeconds>
+              </ProbeAction>
+            </MemberModules>
+            <Composition>
+              <Node ID="PA">
+                <Node ID="Scheduler" />
+              </Node>
+            </Composition>
+          </Composite>
+        </ModuleImplementation>
+        <OutputType>System!System.PropertyBagData</OutputType>
+      </DataSourceModuleType>
+    </ModuleTypes>
+    <MonitorTypes>
+      <UnitMonitorType ID="##CompanyID##.##AppName##.##UniqueID##.Monitor.MonitorType" Accessibility="Internal">
+        <MonitorTypeStates>
+          <MonitorTypeState ID="GoodCondition" NoDetection="false" />
+          <MonitorTypeState ID="BadCondition" NoDetection="false" />
+        </MonitorTypeStates>
+        <Configuration>
+          <xsd:element minOccurs="1" type="xsd:integer" name="IntervalSeconds" xmlns:xsd="http://www.w3.org/2001/XMLSchema" />
+          <xsd:element minOccurs="0" type="xsd:string" name="SyncTime" xmlns:xsd="http://www.w3.org/2001/XMLSchema" />
+          <xsd:element minOccurs="1" type="xsd:integer" name="TimeoutSeconds" xmlns:xsd="http://www.w3.org/2001/XMLSchema" />	
+        </Configuration>
+        <OverrideableParameters>
+          <OverrideableParameter ID="IntervalSeconds" Selector="$Config/IntervalSeconds$" ParameterType="int" />
+          <OverrideableParameter ID="SyncTime" Selector="$Config/SyncTime$" ParameterType="string" />
+          <OverrideableParameter ID="TimeoutSeconds" Selector="$Config/TimeoutSeconds$" ParameterType="int" />
+        </OverrideableParameters>
+        <MonitorImplementation>
+          <MemberModules>
+            <DataSource ID="DS" TypeID="##CompanyID##.##AppName##.##UniqueID##.Monitor.DataSource">
+              <IntervalSeconds>$Config/IntervalSeconds$</IntervalSeconds>
+              <SyncTime>$Config/SyncTime$</SyncTime>	
+              <TimeoutSeconds>$Config/TimeoutSeconds$</TimeoutSeconds>
+            </DataSource>
+            <ConditionDetection ID="GoodConditionFilter" TypeID="System!System.ExpressionFilter">
+              <Expression>
+                <SimpleExpression>
+                  <ValueExpression>
+                    <XPathQuery Type="String">Property[@Name='Result']</XPathQuery>
+                  </ValueExpression>
+                  <Operator>Equal</Operator>
+                  <ValueExpression>
+                    <Value Type="String">GoodCondition</Value>
+                  </ValueExpression>
+                </SimpleExpression>
+              </Expression>
+            </ConditionDetection>
+            <ConditionDetection ID="BadConditionFilter" TypeID="System!System.ExpressionFilter">
+              <Expression>
+                <SimpleExpression>
+                  <ValueExpression>
+                    <XPathQuery Type="String">Property[@Name='Result']</XPathQuery>
+                  </ValueExpression>
+                  <Operator>Equal</Operator>
+                  <ValueExpression>
+                    <Value Type="String">BadCondition</Value>
+                  </ValueExpression>
+                </SimpleExpression>
+              </Expression>
+            </ConditionDetection>
+          </MemberModules>
+          <RegularDetections>
+            <RegularDetection MonitorTypeStateID="GoodCondition">
+              <Node ID="GoodConditionFilter">
+                <Node ID="DS" />
+              </Node>
+            </RegularDetection>
+            <RegularDetection MonitorTypeStateID="BadCondition">
+              <Node ID="BadConditionFilter">
+                <Node ID="DS" />
+              </Node>
+            </RegularDetection>
+          </RegularDetections>
+          <OnDemandDetections>
+            <OnDemandDetection MonitorTypeStateID="GoodCondition">
+              <Node ID="GoodConditionFilter">
+                <Node ID="DS" />
+              </Node>
+            </OnDemandDetection>
+            <OnDemandDetection MonitorTypeStateID="BadCondition">
+              <Node ID="BadConditionFilter">
+                <Node ID="DS" />
+              </Node>
+            </OnDemandDetection>
+          </OnDemandDetections>
+        </MonitorImplementation>
+      </UnitMonitorType>
+    </MonitorTypes>
+  </TypeDefinitions>
+  <Monitoring>
+    <Monitors>
+      <UnitMonitor ID="##CompanyID##.##AppName##.##UniqueID##.Monitor" Accessibility="Public" Enabled="true" Target="##ClassID##" ParentMonitorID="Health!System.Health.AvailabilityState" Remotable="true" Priority="Normal" TypeID="##CompanyID##.##AppName##.##UniqueID##.Monitor.MonitorType" ConfirmDelivery="true">
+        <Category>AvailabilityHealth</Category>
+        <AlertSettings AlertMessage="##CompanyID##.##AppName##.##UniqueID##.Monitor.AlertMessage">
+          <AlertOnState>Warning</AlertOnState>
+          <AutoResolve>true</AutoResolve>
+          <AlertPriority>Normal</AlertPriority>
+          <AlertSeverity>MatchMonitorHealth</AlertSeverity>
+        </AlertSettings>
+        <OperationalStates>
+          <OperationalState ID="GoodCondition" MonitorTypeStateID="GoodCondition" HealthState="Success" />
+          <OperationalState ID="BadCondition" MonitorTypeStateID="BadCondition" HealthState="Warning" />
+        </OperationalStates>
+        <Configuration>
+          <IntervalSeconds>##IntervalSeconds##</IntervalSeconds>
+          <SyncTime></SyncTime>
+          <TimeoutSeconds>120</TimeoutSeconds>
+        </Configuration>
+      </UnitMonitor>
+    </Monitors>
+  </Monitoring>
+  <Presentation>
+    <StringResources>
+      <StringResource ID="##CompanyID##.##AppName##.##UniqueID##.Monitor.AlertMessage" />
+    </StringResources>
+  </Presentation>
+  <LanguagePacks>
+    <LanguagePack ID="ENU" IsDefault="true">
+      <DisplayStrings>
+        <DisplayString ElementID="##CompanyID##.##AppName##.##UniqueID##.Monitor">
+          <Name>##CompanyID## ##AppName## ##UniqueID## Monitor</Name>
+          <Description></Description>
+        </DisplayString>
+        <DisplayString ElementID="##CompanyID##.##AppName##.##UniqueID##.Monitor" SubElementID="GoodCondition">
+          <Name>Good Condition</Name>
+        </DisplayString>
+        <DisplayString ElementID="##CompanyID##.##AppName##.##UniqueID##.Monitor" SubElementID="BadCondition">
+          <Name>Bad Condition</Name>
+        </DisplayString>
+        <DisplayString ElementID="##CompanyID##.##AppName##.##UniqueID##.Monitor.AlertMessage">
+          <Name>##CompanyID## ##AppName## ##UniqueID## Monitor: Failure</Name>
+          <Description>##CompanyID## ##AppName## ##UniqueID## Monitor: detected a bad condition</Description>
+        </DisplayString>		
+      </DisplayStrings>
+    </LanguagePack>
+  </LanguagePacks>
+</ManagementPackFragment>`,
                 fields: [
-                    { id: 'intervalSeconds', label: 'Check Interval (seconds)', type: 'number', required: true, value: '300' },
-                    { id: 'scriptBody', label: 'PowerShell Script', type: 'textarea', required: true, placeholder: 'Enter your PowerShell monitoring script here...' }
+                    { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'CheckWebSite' },
+                    { id: 'intervalSeconds', label: 'Check Interval (seconds)', type: 'number', required: true, value: '3600', placeholder: '3600' },
+                    { id: 'eventId', label: 'Event ID', type: 'number', required: true, value: '1234', placeholder: '1234', help: 'Event ID for script logging in Operations Manager event log' },
+                    { id: 'scriptBody', label: 'PowerShell Script', type: 'textarea', required: true, 
+                      placeholder: '# Your monitoring script should set $bag values:\n# $bag.AddValue(\'Result\',\'GoodCondition\')  # for healthy\n# $bag.AddValue(\'Result\',\'BadCondition\')   # for unhealthy\n\nExample:\n$strCondition = "Good"  # or "Bad"\nif ($strCondition -eq "Good") {\n  $bag.AddValue(\'Result\',\'GoodCondition\')\n} else {\n  $bag.AddValue(\'Result\',\'BadCondition\')\n}',
+                      help: 'Script must set $bag.AddValue(\'Result\', \'GoodCondition\') or $bag.AddValue(\'Result\', \'BadCondition\'). Note: $bag is automatically returned by the wrapper script - do NOT add "return $bag" in your code.' 
+                    }
                 ]
             },
             'powershell-script-with-params-monitor': {
@@ -548,6 +786,18 @@ Computer: {1}</Description>
         document.addEventListener('click', (e) => {
             if (e.target.closest('.discovery-card')) {
                 this.selectDiscoveryCard(e.target.closest('.discovery-card'));
+            }
+            
+            // Handle clicking on component card (anywhere on the card)
+            const componentCard = e.target.closest('.component-card');
+            if (componentCard && !e.target.closest('.component-checkbox')) {
+                // Only toggle if not clicking directly on the checkbox label
+                const checkbox = componentCard.querySelector('input[type="checkbox"]');
+                if (checkbox) {
+                    checkbox.checked = !checkbox.checked;
+                    // Trigger the change event
+                    checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+                }
             }
             
             // Handle step navigation when clicking on progress steps
@@ -607,10 +857,12 @@ Computer: {1}</Description>
             return;
         }
         
+        const previousStep = this.currentStep;
+        
         // Allow navigation to any previous step (already completed)
         if (targetStep < this.currentStep) {
             this.currentStep = targetStep;
-            this.updateStepDisplay();
+            this.updateStepDisplay(previousStep);
             return;
         }
         
@@ -619,7 +871,7 @@ Computer: {1}</Description>
             if (this.validateCurrentStep()) {
                 this.saveCurrentStepData();
                 this.currentStep = targetStep;
-                this.updateStepDisplay();
+                this.updateStepDisplay(previousStep);
                 
                 // Generate configuration forms if navigating to step 6
                 if (this.currentStep === 6) {
@@ -662,11 +914,15 @@ Computer: {1}</Description>
         const componentType = checkbox.value;
         const card = checkbox.closest('.component-card');
         
-        const step = document.querySelector('.form-step:not([style*="display: none"])');
+        console.log('handleComponentSelection called for:', componentType);
+        
+        // Find the step by checking which step contains this checkbox
+        const step = checkbox.closest('.form-step');
         let category = 'other';
         
         if (step) {
             const stepId = step.id;
+            console.log('Found step:', stepId);
             switch (stepId) {
                 case 'step-3':
                     category = 'monitors';
@@ -682,25 +938,147 @@ Computer: {1}</Description>
             }
         }
         
+        console.log('Category:', category, 'Step:', step ? step.id : 'none');
+        
         if (checkbox.checked) {
             if (!this.mpData.selectedComponents[category]) {
                 this.mpData.selectedComponents[category] = [];
             }
             
-            if (!this.mpData.selectedComponents[category].includes(componentType)) {
-                this.mpData.selectedComponents[category].push(componentType);
+            // For monitors, create a new instance with unique ID
+            if (category === 'monitors') {
+                // Initialize counter for this type if it doesn't exist
+                if (!this.instanceCounters[componentType]) {
+                    this.instanceCounters[componentType] = 0;
+                }
+                this.instanceCounters[componentType]++;
+                
+                const instance = {
+                    type: componentType,
+                    instanceId: `${componentType}-instance-${this.instanceCounters[componentType]}`
+                };
+                
+                this.mpData.selectedComponents[category].push(instance);
+                console.log('Added monitor instance:', instance);
+                
+                // Add or update "Add Another" button
+                let addBtn = card.querySelector('.btn-add-another');
+                if (!addBtn) {
+                    addBtn = document.createElement('button');
+                    addBtn.className = 'btn-add-another';
+                    addBtn.onclick = (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        this.addAnotherMonitorInstance(componentType);
+                    };
+                    card.appendChild(addBtn);
+                }
+                
+                // Update button text with count
+                const count = this.mpData.selectedComponents.monitors.filter(m => m.type === componentType).length;
+                addBtn.innerHTML = `<i class="fas fa-plus"></i> Add Another <span class="instance-count">${count}</span>`;
+            } else {
+                // For other categories, keep existing behavior
+                if (!this.mpData.selectedComponents[category].includes(componentType)) {
+                    this.mpData.selectedComponents[category].push(componentType);
+                }
             }
+            
+            console.log('Updated array:', this.mpData.selectedComponents[category]);
             
             card.classList.add('selected');
         } else {
             if (this.mpData.selectedComponents[category]) {
-                const index = this.mpData.selectedComponents[category].indexOf(componentType);
-                if (index > -1) {
-                    this.mpData.selectedComponents[category].splice(index, 1);
+                if (category === 'monitors') {
+                    // Remove all instances of this monitor type
+                    this.mpData.selectedComponents[category] = this.mpData.selectedComponents[category]
+                        .filter(instance => instance.type !== componentType);
+                    // Reset counter
+                    this.instanceCounters[componentType] = 0;
+                    // Remove "Add Another" button
+                    const addBtn = card.querySelector('.btn-add-another');
+                    if (addBtn) addBtn.remove();
+                } else {
+                    const index = this.mpData.selectedComponents[category].indexOf(componentType);
+                    if (index > -1) {
+                        this.mpData.selectedComponents[category].splice(index, 1);
+                    }
                 }
             }
             
+            console.log('Updated array after removal:', this.mpData.selectedComponents[category]);
+            
             card.classList.remove('selected');
+        }
+    }
+
+    addAnotherMonitorInstance(componentType) {
+        // Increment counter and create new instance
+        if (!this.instanceCounters[componentType]) {
+            this.instanceCounters[componentType] = 0;
+        }
+        this.instanceCounters[componentType]++;
+        
+        const instance = {
+            type: componentType,
+            instanceId: `${componentType}-instance-${this.instanceCounters[componentType]}`
+        };
+        
+        this.mpData.selectedComponents.monitors.push(instance);
+        console.log('Added another monitor instance:', instance);
+        
+        // Show notification
+        this.showNotification(`Added another instance of ${this.fragmentLibrary[componentType]?.name || componentType}`, 'success');
+        
+        // If we're on step 6, regenerate the configuration forms
+        if (this.currentStep === 6) {
+            this.generateConfigurationForms();
+        }
+    }
+
+    removeMonitorInstance(instanceId) {
+        // Remove the specific monitor instance
+        this.mpData.selectedComponents.monitors = this.mpData.selectedComponents.monitors
+            .filter(instance => instance.instanceId !== instanceId);
+        
+        // Remove configuration data for this instance
+        delete this.mpData.configurations[instanceId];
+        
+        // Regenerate the configuration forms
+        this.generateConfigurationForms();
+        
+        console.log('Removed monitor instance:', instanceId);
+        console.log('Remaining monitors:', this.mpData.selectedComponents.monitors);
+    }
+
+    addAnotherMonitorInstance(componentType) {
+        // Increment counter and create new instance
+        if (!this.instanceCounters[componentType]) {
+            this.instanceCounters[componentType] = 0;
+        }
+        this.instanceCounters[componentType]++;
+        
+        const instance = {
+            type: componentType,
+            instanceId: `${componentType}-instance-${this.instanceCounters[componentType]}`
+        };
+        
+        this.mpData.selectedComponents.monitors.push(instance);
+        console.log('Added another monitor instance:', instance);
+        
+        // Update the button count
+        const card = document.querySelector(`.component-card[data-component="${componentType}"]`);
+        if (card) {
+            const addBtn = card.querySelector('.btn-add-another');
+            if (addBtn) {
+                const count = this.mpData.selectedComponents.monitors.filter(m => m.type === componentType).length;
+                addBtn.innerHTML = `<i class="fas fa-plus"></i> Add Another <span class="instance-count">${count}</span>`;
+            }
+        }
+        
+        // If we're on step 6, regenerate the configuration forms
+        if (this.currentStep === 6) {
+            this.generateConfigurationForms();
         }
     }
 
@@ -813,11 +1191,30 @@ Computer: {1}</Description>
         }
     }
 
-    updateStepDisplay() {
+    updateStepDisplay(previousStep = null) {
+        const isGoingBackward = previousStep !== null && this.currentStep < previousStep;
+        
+        console.log('updateStepDisplay - Current:', this.currentStep, 'Previous:', previousStep, 'Going backward:', isGoingBackward);
+        
         document.querySelectorAll('.progress-step').forEach((step, index) => {
             const stepNumber = index + 1;
-            step.classList.toggle('active', stepNumber === this.currentStep);
-            step.classList.toggle('completed', stepNumber < this.currentStep);
+            
+            // If going backward and this step was just un-completed, add animation class
+            if (isGoingBackward && stepNumber === previousStep - 1) {
+                step.classList.add('animating-backward');
+                // Remove the animation class after it completes
+                setTimeout(() => {
+                    step.classList.remove('animating-backward');
+                }, 400);
+            }
+            
+            const isActive = stepNumber === this.currentStep;
+            const isCompleted = stepNumber < this.currentStep;
+            
+            step.classList.toggle('active', isActive);
+            step.classList.toggle('completed', isCompleted);
+            
+            console.log(`Step ${stepNumber}: active=${isActive}, completed=${isCompleted}`);
         });
         
         document.querySelectorAll('.form-step').forEach((step, index) => {
@@ -869,6 +1266,11 @@ Computer: {1}</Description>
         
         configContainer.innerHTML = '';
         
+        // Debug logging
+        console.log('generateConfigurationForms called');
+        console.log('selectedComponents:', this.mpData.selectedComponents);
+        console.log('monitors array:', this.mpData.selectedComponents.monitors);
+        
         // Generate discovery configuration
         if (this.mpData.selectedComponents.discovery && this.mpData.selectedComponents.discovery !== 'skip') {
             const discoveryType = this.mpData.selectedComponents.discovery;
@@ -894,26 +1296,58 @@ Computer: {1}</Description>
 
         // Generate monitor configurations
         if (this.mpData.selectedComponents.monitors && this.mpData.selectedComponents.monitors.length > 0) {
-            this.mpData.selectedComponents.monitors.forEach(monitorType => {
+            console.log('Processing monitors, count:', this.mpData.selectedComponents.monitors.length);
+            this.mpData.selectedComponents.monitors.forEach(monitorInstance => {
+                const monitorType = monitorInstance.type;
+                const instanceId = monitorInstance.instanceId;
+                console.log('Processing monitor instance:', instanceId, 'of type:', monitorType);
                 const fragment = this.fragmentLibrary[monitorType];
+                console.log('Fragment found:', fragment ? 'YES' : 'NO');
                 if (fragment) {
+                    console.log('Fragment name:', fragment.name);
+                    console.log('Fragment fields:', fragment.fields);
+                    
+                    // Count how many instances of this type exist
+                    const instanceNumber = this.mpData.selectedComponents.monitors
+                        .filter(m => m.type === monitorType)
+                        .indexOf(monitorInstance) + 1;
+                    const totalOfType = this.mpData.selectedComponents.monitors
+                        .filter(m => m.type === monitorType).length;
+                    
                     const panel = document.createElement('div');
                     panel.className = 'config-panel';
+                    panel.dataset.instanceId = instanceId;
                     panel.innerHTML = `
                         <h3>
                             <div class="config-panel-icon">
                                 <i class="fas fa-heartbeat"></i>
                             </div>
-                            Configure ${fragment.name}
+                            Configure ${fragment.name}${totalOfType > 1 ? ` (Instance ${instanceNumber})` : ''}
+                            ${totalOfType > 1 ? `<button class="btn-remove-instance" data-instance-id="${instanceId}" style="margin-left: auto; padding: 4px 12px; background: #dc3545; border: none; color: white; border-radius: 4px; cursor: pointer; font-size: 0.9em;"><i class="fas fa-trash"></i> Remove</button>` : ''}
                         </h3>
-                        <div class="config-grid" id="config-${monitorType}">
-                            ${this.generateConfigFields(monitorType, fragment.fields)}
+                        <div class="config-grid" id="config-${instanceId}">
+                            ${this.generateConfigFields(instanceId, fragment.fields)}
                         </div>
                     `;
                     
                     configContainer.appendChild(panel);
+                    console.log('Panel appended for', instanceId);
+                } else {
+                    console.error('Fragment NOT found for monitor type:', monitorType);
+                    console.log('Available fragment keys:', Object.keys(this.fragmentLibrary));
                 }
             });
+            
+            // Add event listeners for remove buttons
+            configContainer.querySelectorAll('.btn-remove-instance').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const instanceId = btn.dataset.instanceId;
+                    this.removeMonitorInstance(instanceId);
+                });
+            });
+        } else {
+            console.log('No monitors selected or monitors array is empty');
         }
 
         // Generate rule configurations (when rules are implemented)
@@ -988,10 +1422,14 @@ Computer: {1}</Description>
                     input = `<input type="text" id="${fieldId}" placeholder="${placeholder}" value="${value}" ${required}>`;
             }
             
+            const helpText = field.help ? `<small>${field.help}</small>` : '';
+            const fullWidthClass = field.type === 'textarea' ? ' form-group--full-width' : '';
+            
             return `
-                <div class="form-group">
+                <div class="form-group${fullWidthClass}">
                     <label for="${fieldId}">${field.label}${field.required ? ' *' : ''}</label>
                     ${input}
+                    ${helpText}
                 </div>
             `;
         }).join('');
@@ -1034,7 +1472,7 @@ Basic Information Needed:
 
 Selected Components:
 ${this.mpData.selectedComponents.discovery ? `- Discovery: ${this.mpData.selectedComponents.discovery}` : '- No discovery selected'}
-${this.mpData.selectedComponents.monitors?.length > 0 ? `- Monitors: ${this.mpData.selectedComponents.monitors.join(', ')}` : ''}
+${this.mpData.selectedComponents.monitors?.length > 0 ? `- Monitors: ${this.mpData.selectedComponents.monitors.map(m => m.type).join(', ')} (${this.mpData.selectedComponents.monitors.length} instance${this.mpData.selectedComponents.monitors.length > 1 ? 's' : ''})` : ''}
 ${this.mpData.selectedComponents.rules?.length > 0 ? `- Rules: ${this.mpData.selectedComponents.rules.join(', ')}` : ''}
 
 Once you complete Step 1, the preview will show the actual XML structure.`;
@@ -1115,7 +1553,10 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
                     let componentType, fieldName;
                     
                     // Find the original component type by checking against known types
-                    const knownComponentTypes = Object.keys(this.fragmentLibrary);
+                    // Sort by length (longest first) to match more specific types first
+                    const knownComponentTypes = Object.keys(this.fragmentLibrary)
+                        .sort((a, b) => b.length - a.length);
+                    
                     const matchingType = knownComponentTypes.find(type => id.startsWith(type + '-'));
                     
                     if (matchingType) {
@@ -1161,13 +1602,24 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
         
         // Add monitor fragments
         if (this.mpData.selectedComponents.monitors && this.mpData.selectedComponents.monitors.length > 0) {
-            this.mpData.selectedComponents.monitors.forEach(monitorType => {
+            console.log('Processing', this.mpData.selectedComponents.monitors.length, 'monitor instances');
+            this.mpData.selectedComponents.monitors.forEach(monitorInstance => {
+                const monitorType = monitorInstance.type;
+                const instanceId = monitorInstance.instanceId;
+                console.log('Looking for monitor fragment:', monitorType, 'for instance:', instanceId);
                 const fragment = this.fragmentLibrary[monitorType];
+                console.log('Fragment found:', fragment ? 'YES' : 'NO');
                 if (fragment && fragment.template) {
-                    const processedFragment = this.processFragmentTemplate(monitorType, fragment.template);
+                    console.log('Processing template for', instanceId);
+                    const processedFragment = this.processFragmentTemplate(instanceId, fragment.template, monitorType);
+                    console.log('Processed fragment length:', processedFragment.length);
                     allFragments.push(processedFragment);
+                } else {
+                    console.error('No template found for monitor:', monitorType);
                 }
             });
+        } else {
+            console.log('No monitors selected');
         }
         
         // Extract sections from fragments and combine them
@@ -1199,44 +1651,76 @@ ${languagePacks ? `${languagePacks}` : ''}
     }
 
     extractAndCombineSections(fragments) {
-        let typeDefinitions = [];
+        let classTypes = [];
+        let moduleTypes = [];
+        let monitorTypes = [];
         let discoveries = [];
         let monitors = [];
         let rules = [];
         let displayStrings = [];
         
-        fragments.forEach(fragmentXml => {
+        console.log('extractAndCombineSections - Processing', fragments.length, 'fragments');
+        
+        fragments.forEach((fragmentXml, index) => {
             try {
+                console.log(`Fragment ${index + 1}:`, fragmentXml.substring(0, 200));
+                
                 // Parse the fragment XML
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(fragmentXml, 'text/xml');
                 
-                // Extract TypeDefinitions
-                const typeDefsNodes = doc.querySelectorAll('TypeDefinitions ClassTypes ClassType');
-                typeDefsNodes.forEach(node => {
-                    typeDefinitions.push(this.nodeToString(node));
+                // Check for parsing errors
+                const parserError = doc.querySelector('parsererror');
+                if (parserError) {
+                    console.error('XML Parse Error:', parserError.textContent);
+                    return;
+                }
+                
+                // Extract ClassTypes from TypeDefinitions
+                const classTypeNodes = doc.querySelectorAll('TypeDefinitions > EntityTypes > ClassTypes > ClassType');
+                console.log('Found ClassTypes:', classTypeNodes.length);
+                classTypeNodes.forEach(node => {
+                    classTypes.push(this.nodeToString(node));
+                });
+                
+                // Extract ModuleTypes from TypeDefinitions
+                const moduleTypeNodes = doc.querySelectorAll('TypeDefinitions > ModuleTypes > DataSourceModuleType, TypeDefinitions > ModuleTypes > ProbeActionModuleType, TypeDefinitions > ModuleTypes > ConditionDetectionModuleType, TypeDefinitions > ModuleTypes > WriteActionModuleType');
+                console.log('Found ModuleTypes:', moduleTypeNodes.length);
+                moduleTypeNodes.forEach(node => {
+                    moduleTypes.push(this.nodeToString(node));
+                });
+                
+                // Extract MonitorTypes from TypeDefinitions
+                const monitorTypeNodes = doc.querySelectorAll('TypeDefinitions > MonitorTypes > UnitMonitorType, TypeDefinitions > MonitorTypes > AggregateMonitorType, TypeDefinitions > MonitorTypes > DependencyMonitorType');
+                console.log('Found MonitorTypes:', monitorTypeNodes.length);
+                monitorTypeNodes.forEach(node => {
+                    monitorTypes.push(this.nodeToString(node));
                 });
                 
                 // Extract Discoveries
-                const discoveryNodes = doc.querySelectorAll('Monitoring Discoveries Discovery');
+                const discoveryNodes = doc.querySelectorAll('Monitoring > Discoveries > Discovery');
+                console.log('Found Discoveries:', discoveryNodes.length);
                 discoveryNodes.forEach(node => {
                     discoveries.push(this.nodeToString(node));
                 });
                 
                 // Extract Monitors
-                const monitorNodes = doc.querySelectorAll('Monitoring Monitors UnitMonitor, Monitoring Monitors AggregateMonitor, Monitoring Monitors DependencyMonitor');
+                const monitorNodes = doc.querySelectorAll('Monitoring > Monitors > UnitMonitor, Monitoring > Monitors > AggregateMonitor, Monitoring > Monitors > DependencyMonitor');
+                console.log('Found Monitors:', monitorNodes.length);
                 monitorNodes.forEach(node => {
                     monitors.push(this.nodeToString(node));
                 });
                 
                 // Extract Rules
-                const ruleNodes = doc.querySelectorAll('Monitoring Rules Rule');
+                const ruleNodes = doc.querySelectorAll('Monitoring > Rules > Rule');
+                console.log('Found Rules:', ruleNodes.length);
                 ruleNodes.forEach(node => {
                     rules.push(this.nodeToString(node));
                 });
                 
                 // Extract Display Strings
-                const displayStringNodes = doc.querySelectorAll('LanguagePacks LanguagePack DisplayStrings DisplayString');
+                const displayStringNodes = doc.querySelectorAll('LanguagePacks > LanguagePack > DisplayStrings > DisplayString');
+                console.log('Found DisplayStrings:', displayStringNodes.length);
                 displayStringNodes.forEach(node => {
                     displayStrings.push(this.nodeToString(node));
                 });
@@ -1246,15 +1730,33 @@ ${languagePacks ? `${languagePacks}` : ''}
             }
         });
         
+        console.log('Total extracted - Monitors:', monitors.length, 'DisplayStrings:', displayStrings.length);
+        
         // Build combined sections
         let combinedTypeDefinitions = '';
-        if (typeDefinitions.length > 0) {
-            combinedTypeDefinitions = `    <EntityTypes>
+        let typeDefSections = [];
+        
+        if (classTypes.length > 0) {
+            typeDefSections.push(`    <EntityTypes>
       <ClassTypes>
-${typeDefinitions.map(def => '        ' + def).join('\n')}
+${classTypes.map(def => '        ' + def).join('\n')}
       </ClassTypes>
-    </EntityTypes>`;
+    </EntityTypes>`);
         }
+        
+        if (moduleTypes.length > 0) {
+            typeDefSections.push(`    <ModuleTypes>
+${moduleTypes.map(def => '      ' + def).join('\n')}
+    </ModuleTypes>`);
+        }
+        
+        if (monitorTypes.length > 0) {
+            typeDefSections.push(`    <MonitorTypes>
+${monitorTypes.map(def => '      ' + def).join('\n')}
+    </MonitorTypes>`);
+        }
+        
+        combinedTypeDefinitions = typeDefSections.join('\n');
         
         let combinedMonitoring = '';
         let monitoringSections = [];
@@ -1391,7 +1893,7 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
         return this.processFragmentTemplate(discoveryType, fragment.template);
     }
 
-    processFragmentTemplate(componentType, template) {
+    processFragmentTemplate(componentType, template, baseMonitorType = null) {
         const { companyId, appName } = this.mpData.basicInfo;
         
         // Ensure configuration data is saved before processing
@@ -1399,19 +1901,29 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
         
         const config = this.mpData.configurations[componentType] || {};
         
+        // Get target class from discovery configuration if not in current component
+        const discoveryType = this.mpData.selectedComponents.discovery;
+        const discoveryConfig = discoveryType ? this.mpData.configurations[discoveryType] || {} : {};
+        const targetClass = config.targetClass || config.targetclass || discoveryConfig.targetClass || discoveryConfig.targetclass || 'Windows!Microsoft.Windows.Server.OperatingSystem';
+        
+        console.log('processFragmentTemplate:', componentType);
+        console.log('Target Class from discovery:', discoveryConfig.targetClass);
+        console.log('Final Target Class:', targetClass);
+        
         // Create replacement map with better debugging
         const replacements = {
             '##CompanyID##': companyId,
             '##AppName##': appName,
             '##UniqueID##': config.uniqueId || 'Application',
-            '##ClassID##': config.targetClass || config.targetclass || 'Windows!Microsoft.Windows.Server.OperatingSystem',
+            '##ClassID##': targetClass,
             '##RegKeyPath##': config.regKeyPath || config.regkeypath || 'SOFTWARE\\MyCompany\\MyApplication',
-            '##TargetClass##': config.targetClass || config.targetclass || 'Windows!Microsoft.Windows.Server.OperatingSystem',
+            '##TargetClass##': targetClass,
             '##ServiceName##': config.serviceName || config.servicename || 'YourService',
             '##WMIQuery##': config.wmiQuery || config.wmiquery || 'SELECT * FROM Win32_Service WHERE Name = "YourService"',
             '##Namespace##': config.namespace || 'root\\cimv2',
             '##ScriptType##': config.scriptType || config.scripttype || 'PowerShell',
             '##ScriptBody##': config.scriptBody || config.scriptbody || '# Enter your script here',
+            '##SCRIPT_BODY##': config.scriptBody || config.scriptbody || '# Your custom script here\n$bag.AddValue(\'Result\',\'GoodCondition\')',
             '##ValueName##': config.valueName || config.valuename || '',
             '##ExpectedValue##': config.expectedValue || config.expectedvalue || '',
             '##AlertPriority##': config.alertPriority || config.alertpriority || 'Normal',
@@ -1423,6 +1935,7 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
             '##Instance##': config.instanceName || config.instance || '_Total',
             '##FrequencySeconds##': config.frequencySeconds || config.intervalseconds || config.intervalSeconds || '300',
             '##IntervalSeconds##': config.intervalSeconds || config.frequencySeconds || config.intervalseconds || '300',
+            '##EventID##': config.eventId || config.eventid || '1234',
             '##Threshold##': config.threshold || config.warningThreshold || config.warningthreshold || '80',
             '##WarningThreshold##': config.warningThreshold || config.warningthreshold || '80',
             '##CriticalThreshold##': config.criticalThreshold || config.criticalthreshold || '95',
