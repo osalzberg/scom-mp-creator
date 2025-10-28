@@ -84,30 +84,6 @@ class MPCreator {
         </DataSource>
       </Discovery>
     </Discoveries>
-    <Monitors>
-      <UnitMonitor ID="##CompanyID##.##AppName##.##UniqueID##.AvailabilityMonitor" Accessibility="Public" Enabled="true" Target="##CompanyID##.##AppName##.##UniqueID##.Class" ParentMonitorID="Health!System.Health.AvailabilityState" Remotable="true" Priority="Normal" TypeID="Windows!Microsoft.Windows.CheckNTServiceStateMonitorType" ConfirmDelivery="false">
-        <Category>AvailabilityHealth</Category>
-        <AlertSettings AlertMessage="##CompanyID##.##AppName##.##UniqueID##.AvailabilityMonitor.AlertMessage">
-          <AlertOnState>Warning</AlertOnState>
-          <AutoResolve>true</AutoResolve>
-          <AlertPriority>Normal</AlertPriority>
-          <AlertSeverity>Error</AlertSeverity>
-          <AlertParameters>
-            <AlertParameter1>$Data/Context/Property[@Name='Name']$</AlertParameter1>
-            <AlertParameter2>$Target/Host/Property[Type="Windows!Microsoft.Windows.Computer"]/PrincipalName$</AlertParameter2>
-          </AlertParameters>
-        </AlertSettings>
-        <OperationalStates>
-          <OperationalState ID="Running" MonitorTypeStateID="Running" HealthState="Success" />
-          <OperationalState ID="NotRunning" MonitorTypeStateID="NotRunning" HealthState="Warning" />
-        </OperationalStates>
-        <Configuration>
-          <ComputerName />
-          <ServiceName>W3SVC</ServiceName>
-          <CheckStartupType />
-        </Configuration>
-      </UnitMonitor>
-    </Monitors>
   </Monitoring>
   <LanguagePacks>
     <LanguagePack ID="ENU" IsDefault="true">
@@ -117,9 +93,6 @@ class MPCreator {
         </DisplayString>
         <DisplayString ElementID="##CompanyID##.##AppName##.##UniqueID##.Class.Discovery">
           <Name>##CompanyID## ##AppName## ##UniqueID## Class Discovery</Name>
-        </DisplayString>
-        <DisplayString ElementID="##CompanyID##.##AppName##.##UniqueID##.AvailabilityMonitor">
-          <Name>##CompanyID## ##AppName## ##UniqueID## Availability Monitor</Name>
         </DisplayString>
       </DisplayStrings>
       <KnowledgeArticles></KnowledgeArticles>
@@ -777,6 +750,125 @@ $momapi.LogScriptEvent($ScriptName,$EventID,0,"\`n Script Completed. \`n Script 
                     { id: 'port', label: 'SNMP Port', type: 'number', required: true, value: '161' },
                     { id: 'threshold', label: 'Threshold', type: 'number', required: true, placeholder: '90' },
                     { id: 'intervalSeconds', label: 'Check Interval (seconds)', type: 'number', required: true, value: '300' }
+                ]
+            },
+            'powershell-script-monitor-3state': {
+                name: 'PowerShell Script Monitor (3 States)',
+                template: `<ManagementPackFragment SchemaVersion="2.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <Monitoring>
+    <Monitors>
+      <UnitMonitor ID="##CompanyID##.##AppName##.##UniqueID##.Monitor" Accessibility="Public" Enabled="true" Target="##ClassID##" ParentMonitorID="Health!System.Health.AvailabilityState" Remotable="true" Priority="Normal" TypeID="PowerShellMonitoring!Community.PowerShellMonitoring.UnitMonitors.PowerShellThreeState" ConfirmDelivery="false">
+        <Category>Custom</Category>
+        <AlertSettings AlertMessage="##CompanyID##.##AppName##.##UniqueID##.Monitor.AlertMessage">
+          <AlertOnState>Warning</AlertOnState>
+          <AutoResolve>true</AutoResolve>
+          <AlertPriority>Normal</AlertPriority>
+          <AlertSeverity>MatchMonitorHealth</AlertSeverity>
+          <AlertParameters>
+            <AlertParameter1>$Data/Context/Property[@Name='State']$</AlertParameter1>
+          </AlertParameters>
+        </AlertSettings>
+        <OperationalStates>
+          <OperationalState ID="Unhealthy" MonitorTypeStateID="Unhealthy" HealthState="Error" />
+          <OperationalState ID="Warning" MonitorTypeStateID="Warning" HealthState="Warning" />
+          <OperationalState ID="Healthy" MonitorTypeStateID="Healthy" HealthState="Success" />
+        </OperationalStates>
+        <Configuration>
+          <IntervalSeconds>##IntervalSeconds##</IntervalSeconds>
+          <SyncTime />
+          <ScriptName>##CompanyID##.##AppName##.##UniqueID##.Monitor.ps1</ScriptName>
+          <ScriptBody># Any Arguments specified will be sent to the script as a single string.
+# If you need to send multiple values, delimit them with a space, semicolon or other separator and then use split.
+param([string]$Arguments)
+
+$ScomAPI = New-Object -comObject "MOM.ScriptAPI"
+$PropertyBag = $ScomAPI.CreatePropertyBag()
+
+# Example of use below, in this case return the length of the string passed in and we'll set health state based on that.
+# Since the health state comparison is string based in this template we'll need to create a state value and return it.
+# Ensure you return a unique value per health state (e.g. a service status), or a unique combination of values.
+
+##SCRIPT_BODY##
+             
+# Send output to SCOM
+$PropertyBag</ScriptBody>
+          <Arguments />
+          <TimeoutSeconds>60</TimeoutSeconds>
+          <UnhealthyExpression>
+            <SimpleExpression>
+              <ValueExpression>
+                <XPathQuery>Property[@Name='State']</XPathQuery>
+              </ValueExpression>
+              <Operator>Equal</Operator>
+              <ValueExpression>
+                <Value>Bad</Value>
+              </ValueExpression>
+            </SimpleExpression>
+          </UnhealthyExpression>
+          <WarningExpression>
+            <SimpleExpression>
+              <ValueExpression>
+                <XPathQuery>Property[@Name='State']</XPathQuery>
+              </ValueExpression>
+              <Operator>Equal</Operator>
+              <ValueExpression>
+                <Value>Warning</Value>
+              </ValueExpression>
+            </SimpleExpression>
+          </WarningExpression>
+          <HealthyExpression>
+            <SimpleExpression>
+              <ValueExpression>
+                <XPathQuery>Property[@Name='State']</XPathQuery>
+              </ValueExpression>
+              <Operator>Equal</Operator>
+              <ValueExpression>
+                <Value>Ok</Value>
+              </ValueExpression>
+            </SimpleExpression>
+          </HealthyExpression>
+        </Configuration>
+      </UnitMonitor>
+    </Monitors>
+  </Monitoring>
+  <Presentation>
+    <StringResources>
+      <StringResource ID="##CompanyID##.##AppName##.##UniqueID##.Monitor.AlertMessage" />
+    </StringResources>
+  </Presentation>
+  <LanguagePacks>
+    <LanguagePack ID="ENU" IsDefault="true">
+      <DisplayStrings>
+        <DisplayString ElementID="##CompanyID##.##AppName##.##UniqueID##.Monitor">
+          <Name>##CompanyID## ##AppName## ##UniqueID## 3-State Monitor</Name>
+          <Description />
+        </DisplayString>
+        <DisplayString ElementID="##CompanyID##.##AppName##.##UniqueID##.Monitor" SubElementID="Unhealthy">
+          <Name>Unhealthy</Name>
+        </DisplayString>
+        <DisplayString ElementID="##CompanyID##.##AppName##.##UniqueID##.Monitor" SubElementID="Warning">
+          <Name>Warning</Name>
+        </DisplayString>
+        <DisplayString ElementID="##CompanyID##.##AppName##.##UniqueID##.Monitor" SubElementID="Healthy">
+          <Name>Healthy</Name>
+        </DisplayString>
+        <DisplayString ElementID="##CompanyID##.##AppName##.##UniqueID##.Monitor.AlertMessage">
+          <Name>##CompanyID## ##AppName## ##UniqueID## 3-State Monitor</Name>
+          <Description>The Status of the monitor is {0}</Description>
+        </DisplayString>
+      </DisplayStrings>
+    </LanguagePack>
+  </LanguagePacks>
+</ManagementPackFragment>`,
+                fields: [
+                    { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'CheckApplication' },
+                    { id: 'intervalSeconds', label: 'Check Interval (seconds)', type: 'number', required: true, value: '3600', placeholder: '3600' },
+                    { id: 'eventId', label: 'Event ID', type: 'number', required: true, value: '1234', placeholder: '1234', help: 'Event ID for script logging in Operations Manager event log' },
+                    { id: 'scriptBody', label: 'PowerShell Script', type: 'textarea', required: true, 
+                      placeholder: ' $status=if(Get-Process -Name notepad -ErrorAction SilentlyContinue) { 1 } else {0} \n\nif($status -eq 0) {\n  $PropertyBag.AddValue("State","Bad")\n}\nelseif($status -eq "Warning") {\n  $PropertyBag.AddValue("State","Warning")\n}\nelse\n{\n  $PropertyBag.AddValue("State","Ok")\n}',
+                      value: ' $status=if(Get-Process -Name notepad -ErrorAction SilentlyContinue) { 1 } else {0} \n\nif($status -eq 0) {\n  $PropertyBag.AddValue("State","Bad")\n}\nelseif($status -eq "Warning") {\n  $PropertyBag.AddValue("State","Warning")\n}\nelse\n{\n  $PropertyBag.AddValue("State","Ok")\n}',
+                      help: 'IMPORTANT: Your script MUST use $PropertyBag.AddValue("State", "Ok|Warning|Bad"). Do NOT change the variable name "State" or "PropertyBag" - they are required for the monitor to work correctly. The script wrapper automatically creates $PropertyBag and returns it.' 
+                    }
                 ]
             }
         };
@@ -1842,6 +1934,19 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
       </Reference>`
         ];
 
+        // Add PowerShell Monitoring reference if 3-state monitor is selected
+        const has3StateMonitor = this.mpData.selectedComponents.monitors?.some(
+            monitor => monitor.type === 'powershell-script-monitor-3state'
+        );
+        
+        if (has3StateMonitor) {
+            refs.push(`      <Reference Alias="PowerShellMonitoring">
+        <ID>Community.PowerShellMonitoring</ID>
+        <Version>1.1.1.2</Version>
+        <PublicKeyToken>3aa540324b898d3c</PublicKeyToken>
+      </Reference>`);
+        }
+
         return refs.join('\n');
     }
 
@@ -1923,7 +2028,7 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
             '##Namespace##': config.namespace || 'root\\cimv2',
             '##ScriptType##': config.scriptType || config.scripttype || 'PowerShell',
             '##ScriptBody##': config.scriptBody || config.scriptbody || '# Enter your script here',
-            '##SCRIPT_BODY##': config.scriptBody || config.scriptbody || '# Your custom script here\n$bag.AddValue(\'Result\',\'GoodCondition\')',
+            '##SCRIPT_BODY##': config.scriptBody || config.scriptbody || ' $status=if(Get-Process -Name notepad -ErrorAction SilentlyContinue) { 1 } else {0} \n\nif($status -eq 0) {\n  $PropertyBag.AddValue("State","Bad")\n}\nelseif($status -eq "Warning") {\n  $PropertyBag.AddValue("State","Warning")\n}\nelse\n{\n  $PropertyBag.AddValue("State","Ok")\n}',
             '##ValueName##': config.valueName || config.valuename || '',
             '##ExpectedValue##': config.expectedValue || config.expectedvalue || '',
             '##AlertPriority##': config.alertPriority || config.alertpriority || 'Normal',

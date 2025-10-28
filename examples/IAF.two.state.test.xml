@@ -1,0 +1,170 @@
+﻿<?xml version="1.0" encoding="utf-8"?><ManagementPack ContentReadable="true" SchemaVersion="2.0" OriginalSchemaVersion="1.1" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+  <Manifest>
+    <Identity>
+      <ID>IAF.two.state.test</ID>
+      <Version>1.0.0.0</Version>
+    </Identity>
+    <Name>IAF two state test</Name>
+    <References>
+      <Reference Alias="SystemCenter">
+        <ID>Microsoft.SystemCenter.Library</ID>
+        <Version>10.22.10118.0</Version>
+        <PublicKeyToken>31bf3856ad364e35</PublicKeyToken>
+      </Reference>
+      <Reference Alias="MicrosoftWindowsServerClusterSharedVolumeMonitoring10110">
+        <ID>Microsoft.Windows.Server.ClusterSharedVolumeMonitoring</ID>
+        <Version>10.1.1.0</Version>
+        <PublicKeyToken>31bf3856ad364e35</PublicKeyToken>
+      </Reference>
+      <Reference Alias="SystemLibrary7585011">
+        <ID>System.Library</ID>
+        <Version>7.5.8501.1</Version>
+        <PublicKeyToken>31bf3856ad364e35</PublicKeyToken>
+      </Reference>
+      <Reference Alias="MicrosoftWindowsClusterLibrary7084476">
+        <ID>Microsoft.Windows.Cluster.Library</ID>
+        <Version>7.0.8447.6</Version>
+        <PublicKeyToken>31bf3856ad364e35</PublicKeyToken>
+      </Reference>
+      <Reference Alias="MicrosoftWindowsLibrary7585011">
+        <ID>Microsoft.Windows.Library</ID>
+        <Version>7.5.8501.1</Version>
+        <PublicKeyToken>31bf3856ad364e35</PublicKeyToken>
+      </Reference>
+      <Reference Alias="Health">
+        <ID>System.Health.Library</ID>
+        <Version>7.0.8447.6</Version>
+        <PublicKeyToken>31bf3856ad364e35</PublicKeyToken>
+      </Reference>
+      <Reference Alias="PowerShellMonitoring">
+        <ID>Community.PowerShellMonitoring</ID>
+        <Version>1.1.1.2</Version>
+        <PublicKeyToken>3aa540324b898d3c</PublicKeyToken>
+      </Reference>
+    </References>
+  </Manifest>
+  <Monitoring>
+    <Monitors>
+      <UnitMonitor ID="UIGeneratedMonitor4694862d80e94a3c814cdf84fd326c36" Accessibility="Public" Enabled="true" Target="MicrosoftWindowsLibrary7585011!Microsoft.Windows.Server.Computer" ParentMonitorID="Health!System.Health.AvailabilityState" Remotable="true" Priority="Normal" TypeID="PowerShellMonitoring!Community.PowerShellMonitoring.UnitMonitors.PowerShellThreeState" ConfirmDelivery="false">
+        <Category>Custom</Category>
+        <AlertSettings AlertMessage="UIGeneratedMonitor4694862d80e94a3c814cdf84fd326c36_AlertMessageResourceID">
+          <AlertOnState>Warning</AlertOnState>
+          <AutoResolve>true</AutoResolve>
+          <AlertPriority>Normal</AlertPriority>
+          <AlertSeverity>MatchMonitorHealth</AlertSeverity>
+          <AlertParameters>
+            <AlertParameter1>$Data/Context/Property[@Name='Status']$</AlertParameter1>
+          </AlertParameters>
+        </AlertSettings>
+        <OperationalStates>
+          <OperationalState ID="UIGeneratedOpStateId1794820f4a3f44f8ab91ce4c4b857dd0" MonitorTypeStateID="Unhealthy" HealthState="Error" />
+          <OperationalState ID="UIGeneratedOpStateId957f1b12bc0641858eff6602cf00c221" MonitorTypeStateID="Warning" HealthState="Warning" />
+          <OperationalState ID="UIGeneratedOpStateId827cefa6ec464880a27390b8f3b0fa66" MonitorTypeStateID="Healthy" HealthState="Success" />
+        </OperationalStates>
+        <Configuration>
+          <IntervalSeconds>120</IntervalSeconds>
+          <SyncTime />
+          <ScriptName>MyScript.ps1</ScriptName>
+          <ScriptBody># Any Arguments specified will be sent to the script as a single string.
+# If you need to send multiple values, delimit them with a space, semicolon or other separator and then use split.
+param([string]$Arguments)
+
+$ScomAPI = New-Object -comObject "MOM.ScriptAPI"
+$PropertyBag = $ScomAPI.CreatePropertyBag()
+
+# Example of use below, in this case return the length of the string passed in and we'll set health state based on that.
+# Since the health state comparison is string based in this template we'll need to create a state value and return it.
+# Ensure you return a unique value per health state (e.g. a service status), or a unique combination of values.
+
+ $status=if(Get-Process -Name notepad -ErrorAction SilentlyContinue) { 1 } else {0} 
+
+if($status -eq 0) {
+  $PropertyBag.AddValue("State","Bad")
+}
+elseif($status -eq "Warning") {
+  $PropertyBag.AddValue("State","Warning")
+}
+else
+{
+  $PropertyBag.AddValue("State","Ok")
+}
+             
+# Send output to SCOM
+$PropertyBag</ScriptBody>
+          <Arguments />
+          <TimeoutSeconds>60</TimeoutSeconds>
+          <UnhealthyExpression>
+            <SimpleExpression>
+              <ValueExpression>
+                <XPathQuery>Property[@Name='State']</XPathQuery>
+              </ValueExpression>
+              <Operator>Equal</Operator>
+              <ValueExpression>
+                <Value>Bad</Value>
+              </ValueExpression>
+            </SimpleExpression>
+          </UnhealthyExpression>
+          <WarningExpression>
+            <SimpleExpression>
+              <ValueExpression>
+                <XPathQuery>Property[@Name='State']</XPathQuery>
+              </ValueExpression>
+              <Operator>Equal</Operator>
+              <ValueExpression>
+                <Value>Warning</Value>
+              </ValueExpression>
+            </SimpleExpression>
+          </WarningExpression>
+          <HealthyExpression>
+            <SimpleExpression>
+              <ValueExpression>
+                <XPathQuery>Property[@Name='State']</XPathQuery>
+              </ValueExpression>
+              <Operator>Equal</Operator>
+              <ValueExpression>
+                <Value>Ok</Value>
+              </ValueExpression>
+            </SimpleExpression>
+          </HealthyExpression>
+        </Configuration>
+      </UnitMonitor>
+    </Monitors>
+  </Monitoring>
+  <Presentation>
+    <Folders>
+      <Folder ID="Folder_8d57be2b2aa645d3bda817ac21996c69" Accessibility="Public" ParentFolder="SystemCenter!Microsoft.SystemCenter.Monitoring.ViewFolder.Root" />
+    </Folders>
+    <StringResources>
+      <StringResource ID="UIGeneratedMonitor4694862d80e94a3c814cdf84fd326c36_AlertMessageResourceID" />
+    </StringResources>
+  </Presentation>
+  <LanguagePacks>
+    <LanguagePack ID="ENU" IsDefault="false">
+      <DisplayStrings>
+        <DisplayString ElementID="IAF.two.state.test">
+          <Name>IAF two state test</Name>
+        </DisplayString>
+        <DisplayString ElementID="Folder_8d57be2b2aa645d3bda817ac21996c69">
+          <Name>IAF two state test</Name>
+        </DisplayString>
+        <DisplayString ElementID="UIGeneratedMonitor4694862d80e94a3c814cdf84fd326c36">
+          <Name>IAF Three state monitor</Name>
+          <Description />
+        </DisplayString>
+        <DisplayString ElementID="UIGeneratedMonitor4694862d80e94a3c814cdf84fd326c36" SubElementID="UIGeneratedOpStateId1794820f4a3f44f8ab91ce4c4b857dd0">
+          <Name>Unhealthy</Name>
+        </DisplayString>
+        <DisplayString ElementID="UIGeneratedMonitor4694862d80e94a3c814cdf84fd326c36" SubElementID="UIGeneratedOpStateId957f1b12bc0641858eff6602cf00c221">
+          <Name>Warning</Name>
+        </DisplayString>
+        <DisplayString ElementID="UIGeneratedMonitor4694862d80e94a3c814cdf84fd326c36" SubElementID="UIGeneratedOpStateId827cefa6ec464880a27390b8f3b0fa66">
+          <Name>Healthy</Name>
+        </DisplayString>
+        <DisplayString ElementID="UIGeneratedMonitor4694862d80e94a3c814cdf84fd326c36_AlertMessageResourceID">
+          <Name>IAF Three state monitor</Name>
+          <Description>The Status of the monitor is {0}</Description>
+        </DisplayString>
+      </DisplayStrings>
+    </LanguagePack>
+  </LanguagePacks>
+</ManagementPack>
