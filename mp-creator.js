@@ -1696,21 +1696,9 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
         // Save configuration data from all visible config forms
         const allConfigInputs = document.querySelectorAll('#component-configs input, #component-configs select, #component-configs textarea');
         
-        console.log('Saving configuration data from', allConfigInputs.length, 'inputs');
-        
         allConfigInputs.forEach(input => {
             const id = input.id;
             const value = input.value.trim();
-            
-            console.log('Processing field:', id, 'with value:', value);
-            
-            // Extra debug for intervalSeconds fields
-            if (id && id.includes('intervalSeconds')) {
-                console.log('*** FOUND intervalSeconds field!');
-                console.log('  - Full ID:', id);
-                console.log('  - Value:', value);
-                console.log('  - Input element:', input);
-            }
             
             if (id) {
                 // Parse the component type and field from the ID
@@ -1756,18 +1744,9 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
                     
                     // Save the value even if it's empty (might be intentional)
                     this.mpData.configurations[componentType][fieldName] = value;
-                    
-                    console.log('Saved to config:', componentType, '/', fieldName, '=', value);
-                    
-                    // Special logging for intervalSeconds
-                    if (fieldName === 'intervalSeconds') {
-                        console.log('*** INTERVAL SECONDS SAVED:', value, 'for component:', componentType);
-                    }
                 }
             }
         });
-        
-        console.log('Final configuration data:', JSON.stringify(this.mpData.configurations, null, 2));
     }
 
     generateMPXML() {
@@ -1780,21 +1759,11 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
         // Add discovery fragment
         if (this.mpData.selectedComponents.discovery && this.mpData.selectedComponents.discovery !== 'skip') {
             const discoveryType = this.mpData.selectedComponents.discovery;
-            console.log('*** DISCOVERY TYPE:', discoveryType);
             const fragment = this.fragmentLibrary[discoveryType];
-            console.log('*** FRAGMENT FOUND:', fragment ? 'YES' : 'NO');
-            console.log('*** FRAGMENT HAS TEMPLATE:', fragment && fragment.template ? 'YES' : 'NO');
             if (fragment && fragment.template) {
-                console.log('*** PROCESSING DISCOVERY TEMPLATE');
                 const processedFragment = this.processFragmentTemplate(discoveryType, fragment.template);
-                console.log('*** PROCESSED FRAGMENT LENGTH:', processedFragment.length);
-                console.log('*** PROCESSED FRAGMENT PREVIEW:', processedFragment.substring(0, 200));
                 allFragments.push(processedFragment);
-            } else {
-                console.error('*** NO TEMPLATE FOR DISCOVERY TYPE:', discoveryType);
             }
-        } else {
-            console.log('*** NO DISCOVERY SELECTED OR SKIP');
         }
         
         // Add monitor fragments
@@ -2111,12 +2080,6 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
         
         const config = this.mpData.configurations[componentType] || {};
         
-        console.log('=== processFragmentTemplate DEBUG ===');
-        console.log('componentType:', componentType);
-        console.log('config object:', config);
-        console.log('config.intervalSeconds:', config.intervalSeconds);
-        console.log('config.intervalseconds:', config.intervalseconds);
-        
         // Get target class from discovery configuration if not in current component
         const discoveryType = this.mpData.selectedComponents.discovery;
         const discoveryConfig = discoveryType ? this.mpData.configurations[discoveryType] || {} : {};
@@ -2136,14 +2099,7 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
             monitorTargetClass = targetClass;
         }
         
-        console.log('processFragmentTemplate:', componentType);
-        console.log('Discovery selected:', this.mpData.selectedComponents.discovery);
-        console.log('Discovery uniqueId:', discoveryConfig.uniqueId);
-        console.log('Monitor uniqueId:', config.uniqueId);
-        console.log('Effective uniqueId for monitor:', effectiveUniqueId);
-        console.log('Monitor Target Class:', monitorTargetClass);
-        
-        // Create replacement map with better debugging
+        // Create replacement map
         const replacements = {
             '##CompanyID##': companyId,
             '##AppName##': appName,
@@ -2210,17 +2166,11 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
             '##EventLevel##': config.eventLevel || config.eventlevel || 'Error'
         };
 
-        // Debug logging to help identify the issue
-        console.log('Configuration for', componentType, ':', config);
-        console.log('Registry Key Path value:', config.regKeyPath || config.regkeypath);
-        console.log('*** IntervalSeconds replacement value:', config.intervalSeconds || config.frequencySeconds || config.intervalseconds || '300');
-        
         // FAILSAFE: If intervalSeconds is not in config, try to read it directly from the DOM
         if (!config.intervalSeconds && !config.intervalseconds && !config.frequencySeconds) {
             const intervalInput = document.getElementById(`${componentType}-intervalSeconds`);
             if (intervalInput && intervalInput.value) {
                 config.intervalSeconds = intervalInput.value.trim();
-                console.log('*** FAILSAFE: Read intervalSeconds directly from DOM:', config.intervalSeconds);
             }
         }
 
