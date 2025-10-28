@@ -1073,15 +1073,12 @@ $PropertyBag</ScriptBody>
         const componentType = checkbox.value;
         const card = checkbox.closest('.component-card');
         
-        console.log('handleComponentSelection called for:', componentType);
-        
         // Find the step by checking which step contains this checkbox
         const step = checkbox.closest('.form-step');
         let category = 'other';
         
         if (step) {
             const stepId = step.id;
-            console.log('Found step:', stepId);
             switch (stepId) {
                 case 'step-3':
                     category = 'monitors';
@@ -1096,8 +1093,6 @@ $PropertyBag</ScriptBody>
                     break;
             }
         }
-        
-        console.log('Category:', category, 'Step:', step ? step.id : 'none');
         
         if (checkbox.checked) {
             if (!this.mpData.selectedComponents[category]) {
@@ -1118,7 +1113,6 @@ $PropertyBag</ScriptBody>
                 };
                 
                 this.mpData.selectedComponents[category].push(instance);
-                console.log('Added monitor instance:', instance);
                 
                 // Add or update "Add Another" button
                 let addBtn = card.querySelector('.btn-add-another');
@@ -1143,8 +1137,6 @@ $PropertyBag</ScriptBody>
                 }
             }
             
-            console.log('Updated array:', this.mpData.selectedComponents[category]);
-            
             card.classList.add('selected');
         } else {
             if (this.mpData.selectedComponents[category]) {
@@ -1165,8 +1157,6 @@ $PropertyBag</ScriptBody>
                 }
             }
             
-            console.log('Updated array after removal:', this.mpData.selectedComponents[category]);
-            
             card.classList.remove('selected');
         }
     }
@@ -1184,7 +1174,6 @@ $PropertyBag</ScriptBody>
         };
         
         this.mpData.selectedComponents.monitors.push(instance);
-        console.log('Added another monitor instance:', instance);
         
         // Show notification
         this.showNotification(`Added another instance of ${this.fragmentLibrary[componentType]?.name || componentType}`, 'success');
@@ -1205,9 +1194,6 @@ $PropertyBag</ScriptBody>
         
         // Regenerate the configuration forms
         this.generateConfigurationForms();
-        
-        console.log('Removed monitor instance:', instanceId);
-        console.log('Remaining monitors:', this.mpData.selectedComponents.monitors);
     }
 
     addAnotherMonitorInstance(componentType) {
@@ -1223,7 +1209,6 @@ $PropertyBag</ScriptBody>
         };
         
         this.mpData.selectedComponents.monitors.push(instance);
-        console.log('Added another monitor instance:', instance);
         
         // Update the button count
         const card = document.querySelector(`.component-card[data-component="${componentType}"]`);
@@ -1353,8 +1338,6 @@ $PropertyBag</ScriptBody>
     updateStepDisplay(previousStep = null) {
         const isGoingBackward = previousStep !== null && this.currentStep < previousStep;
         
-        console.log('updateStepDisplay - Current:', this.currentStep, 'Previous:', previousStep, 'Going backward:', isGoingBackward);
-        
         document.querySelectorAll('.progress-step').forEach((step, index) => {
             const stepNumber = index + 1;
             
@@ -1372,8 +1355,6 @@ $PropertyBag</ScriptBody>
             
             step.classList.toggle('active', isActive);
             step.classList.toggle('completed', isCompleted);
-            
-            console.log(`Step ${stepNumber}: active=${isActive}, completed=${isCompleted}`);
         });
         
         document.querySelectorAll('.form-step').forEach((step, index) => {
@@ -1425,11 +1406,6 @@ $PropertyBag</ScriptBody>
         
         configContainer.innerHTML = '';
         
-        // Debug logging
-        console.log('generateConfigurationForms called');
-        console.log('selectedComponents:', this.mpData.selectedComponents);
-        console.log('monitors array:', this.mpData.selectedComponents.monitors);
-        
         // Generate discovery configuration
         if (this.mpData.selectedComponents.discovery && this.mpData.selectedComponents.discovery !== 'skip') {
             const discoveryType = this.mpData.selectedComponents.discovery;
@@ -1455,16 +1431,11 @@ $PropertyBag</ScriptBody>
 
         // Generate monitor configurations
         if (this.mpData.selectedComponents.monitors && this.mpData.selectedComponents.monitors.length > 0) {
-            console.log('Processing monitors, count:', this.mpData.selectedComponents.monitors.length);
             this.mpData.selectedComponents.monitors.forEach(monitorInstance => {
                 const monitorType = monitorInstance.type;
                 const instanceId = monitorInstance.instanceId;
-                console.log('Processing monitor instance:', instanceId, 'of type:', monitorType);
                 const fragment = this.fragmentLibrary[monitorType];
-                console.log('Fragment found:', fragment ? 'YES' : 'NO');
                 if (fragment) {
-                    console.log('Fragment name:', fragment.name);
-                    console.log('Fragment fields:', fragment.fields);
                     
                     // Count how many instances of this type exist
                     const instanceNumber = this.mpData.selectedComponents.monitors
@@ -1490,10 +1461,8 @@ $PropertyBag</ScriptBody>
                     `;
                     
                     configContainer.appendChild(panel);
-                    console.log('Panel appended for', instanceId);
                 } else {
                     console.error('Fragment NOT found for monitor type:', monitorType);
-                    console.log('Available fragment keys:', Object.keys(this.fragmentLibrary));
                 }
             });
             
@@ -1505,8 +1474,6 @@ $PropertyBag</ScriptBody>
                     this.removeMonitorInstance(instanceId);
                 });
             });
-        } else {
-            console.log('No monitors selected or monitors array is empty');
         }
 
         // Generate rule configurations (when rules are implemented)
@@ -1768,24 +1735,17 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
         
         // Add monitor fragments
         if (this.mpData.selectedComponents.monitors && this.mpData.selectedComponents.monitors.length > 0) {
-            console.log('Processing', this.mpData.selectedComponents.monitors.length, 'monitor instances');
             this.mpData.selectedComponents.monitors.forEach(monitorInstance => {
                 const monitorType = monitorInstance.type;
                 const instanceId = monitorInstance.instanceId;
-                console.log('Looking for monitor fragment:', monitorType, 'for instance:', instanceId);
                 const fragment = this.fragmentLibrary[monitorType];
-                console.log('Fragment found:', fragment ? 'YES' : 'NO');
                 if (fragment && fragment.template) {
-                    console.log('Processing template for', instanceId);
                     const processedFragment = this.processFragmentTemplate(instanceId, fragment.template, monitorType);
-                    console.log('Processed fragment length:', processedFragment.length);
                     allFragments.push(processedFragment);
                 } else {
                     console.error('No template found for monitor:', monitorType);
                 }
             });
-        } else {
-            console.log('No monitors selected');
         }
         
         // Extract sections from fragments and combine them
@@ -1825,12 +1785,8 @@ ${languagePacks ? `${languagePacks}` : ''}
         let rules = [];
         let displayStrings = [];
         
-        console.log('extractAndCombineSections - Processing', fragments.length, 'fragments');
-        
         fragments.forEach((fragmentXml, index) => {
             try {
-                console.log(`Fragment ${index + 1}:`, fragmentXml.substring(0, 200));
-                
                 // Parse the fragment XML
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(fragmentXml, 'text/xml');
@@ -1844,49 +1800,42 @@ ${languagePacks ? `${languagePacks}` : ''}
                 
                 // Extract ClassTypes from TypeDefinitions
                 const classTypeNodes = doc.querySelectorAll('TypeDefinitions > EntityTypes > ClassTypes > ClassType');
-                console.log('Found ClassTypes:', classTypeNodes.length);
                 classTypeNodes.forEach(node => {
                     classTypes.push(this.nodeToString(node));
                 });
                 
                 // Extract ModuleTypes from TypeDefinitions
                 const moduleTypeNodes = doc.querySelectorAll('TypeDefinitions > ModuleTypes > DataSourceModuleType, TypeDefinitions > ModuleTypes > ProbeActionModuleType, TypeDefinitions > ModuleTypes > ConditionDetectionModuleType, TypeDefinitions > ModuleTypes > WriteActionModuleType');
-                console.log('Found ModuleTypes:', moduleTypeNodes.length);
                 moduleTypeNodes.forEach(node => {
                     moduleTypes.push(this.nodeToString(node));
                 });
                 
                 // Extract MonitorTypes from TypeDefinitions
                 const monitorTypeNodes = doc.querySelectorAll('TypeDefinitions > MonitorTypes > UnitMonitorType, TypeDefinitions > MonitorTypes > AggregateMonitorType, TypeDefinitions > MonitorTypes > DependencyMonitorType');
-                console.log('Found MonitorTypes:', monitorTypeNodes.length);
                 monitorTypeNodes.forEach(node => {
                     monitorTypes.push(this.nodeToString(node));
                 });
                 
                 // Extract Discoveries
                 const discoveryNodes = doc.querySelectorAll('Monitoring > Discoveries > Discovery');
-                console.log('Found Discoveries:', discoveryNodes.length);
                 discoveryNodes.forEach(node => {
                     discoveries.push(this.nodeToString(node));
                 });
                 
                 // Extract Monitors
                 const monitorNodes = doc.querySelectorAll('Monitoring > Monitors > UnitMonitor, Monitoring > Monitors > AggregateMonitor, Monitoring > Monitors > DependencyMonitor');
-                console.log('Found Monitors:', monitorNodes.length);
                 monitorNodes.forEach(node => {
                     monitors.push(this.nodeToString(node));
                 });
                 
                 // Extract Rules
                 const ruleNodes = doc.querySelectorAll('Monitoring > Rules > Rule');
-                console.log('Found Rules:', ruleNodes.length);
                 ruleNodes.forEach(node => {
                     rules.push(this.nodeToString(node));
                 });
                 
                 // Extract Display Strings
                 const displayStringNodes = doc.querySelectorAll('LanguagePacks > LanguagePack > DisplayStrings > DisplayString');
-                console.log('Found DisplayStrings:', displayStringNodes.length);
                 displayStringNodes.forEach(node => {
                     displayStrings.push(this.nodeToString(node));
                 });
@@ -1895,8 +1844,6 @@ ${languagePacks ? `${languagePacks}` : ''}
                 console.error('Error parsing fragment XML:', error);
             }
         });
-        
-        console.log('Total extracted - Monitors:', monitors.length, 'DisplayStrings:', displayStrings.length);
         
         // Build combined sections
         let combinedTypeDefinitions = '';
