@@ -17,6 +17,7 @@ class MPCreator {
         };
         this.fragmentLibrary = {};
         this.instanceCounters = {};  // Track instance numbers for each monitor type
+        this.previewDebounceTimer = null;  // Timer for debouncing auto-preview updates
         
         this.loadFragmentLibrary();
         this.initializeEventListeners();
@@ -973,6 +974,10 @@ $PropertyBag</ScriptBody>
             // Auto-save configuration data when any input in config section changes
             if (e.target.closest('#component-configs')) {
                 this.saveConfigurationData();
+                // Auto-update preview on step 6
+                if (this.currentStep === 6) {
+                    this.autoGeneratePreview();
+                }
             }
         });
 
@@ -980,6 +985,20 @@ $PropertyBag</ScriptBody>
             // Auto-save configuration data when any input in config section is typed in
             if (e.target.closest('#component-configs')) {
                 this.saveConfigurationData();
+                // Auto-update preview on step 6 with debounce
+                if (this.currentStep === 6) {
+                    clearTimeout(this.previewDebounceTimer);
+                    this.previewDebounceTimer = setTimeout(() => {
+                        this.autoGeneratePreview();
+                    }, 500); // 500ms debounce
+                }
+            }
+            // Also handle management group name input
+            if (e.target.id === 'management-group-name' && this.currentStep === 6) {
+                clearTimeout(this.previewDebounceTimer);
+                this.previewDebounceTimer = setTimeout(() => {
+                    this.autoGeneratePreview();
+                }, 500);
             }
         });
 
@@ -990,6 +1009,10 @@ $PropertyBag</ScriptBody>
                 // Auto-save configuration data when leaving any input in config section
                 if (e.target.closest('#component-configs')) {
                     this.saveConfigurationData();
+                    // Auto-update preview on step 6
+                    if (this.currentStep === 6) {
+                        this.autoGeneratePreview();
+                    }
                 }
             }
         }, true);
@@ -1367,11 +1390,31 @@ $PropertyBag</ScriptBody>
 
         this.scrollToCurrentStep();
         
-        // Update download buttons if we're on step 6
+        // Auto-generate preview if we're on step 6
         if (this.currentStep === 6) {
             setTimeout(() => {
                 updateDownloadButtons();
+                this.autoGeneratePreview();
             }, 100);
+        }
+    }
+
+    autoGeneratePreview() {
+        // Automatically generate and display the XML preview
+        this.saveBasicInfo();
+        this.saveConfigurationData();
+        const xmlContent = this.generateMPXML();
+        // Show output without scrolling (auto mode)
+        const outputArea = document.getElementById('output-area');
+        if (!outputArea) return;
+        
+        const outputCode = outputArea.querySelector('#mp-output code');
+        
+        if (outputCode) {
+            outputCode.textContent = xmlContent;
+        }
+        if (outputArea) {
+            outputArea.style.display = 'block';
         }
     }
 

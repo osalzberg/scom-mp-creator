@@ -660,37 +660,18 @@
                         </div>
                     </div>
                     
-                    <div class="generate-options">
-                        <div class="option-card">
-                            <h3>Preview MP Structure</h3>
-                            <p>Review the structure of your Management Pack before generating</p>
-                            <button type="button" class="btn btn--secondary" onclick="previewMP()">
-                                <i class="fas fa-eye"></i> Preview
-                            </button>
-                        </div>
-                        <div class="option-card">
-                            <h3>Generate XML</h3>
-                            <p>Generate the complete Management Pack XML file</p>
-                            <button type="button" class="btn btn--primary" onclick="generateMP()">
-                                <i class="fas fa-download"></i> Generate
-                            </button>
-                        </div>
-                        <div class="option-card">
-                            <h3>Download Package</h3>
-                            <p>Download a complete MP package with deployment scripts</p>
-                            <button type="button" class="btn btn--primary" onclick="downloadPackage()">
-                                <i class="fas fa-file-archive"></i> Download
-                            </button>
-                        </div>
-                    </div>
-                    
-                    <!-- Preview/Output Area -->
-                    <div class="output-area" id="output-area" style="display: none;">
+                    <!-- Preview/Output Area - Always Visible -->
+                    <div class="output-area" id="output-area">
                         <div class="output-header">
-                            <h3>Generated Management Pack</h3>
-                            <button type="button" class="btn btn--small" onclick="copyToClipboard()">
-                                <i class="fas fa-copy"></i> Copy
-                            </button>
+                            <h3>Live Management Pack Preview</h3>
+                            <div>
+                                <button type="button" class="btn btn--small" onclick="copyToClipboard()">
+                                    <i class="fas fa-copy"></i> Copy
+                                </button>
+                                <button type="button" class="btn btn--small btn--primary" onclick="downloadPackage()" style="margin-left: 8px;">
+                                    <i class="fas fa-download"></i> Download Package
+                                </button>
+                            </div>
                         </div>
                         <pre id="mp-output"><code></code></pre>
                     </div>
