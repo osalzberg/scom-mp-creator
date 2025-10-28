@@ -1,0 +1,20 @@
+{
+  "routes": [
+    {
+      "route": "/",
+      "redirect": "/creator.html",
+      "statusCode": 301
+    }
+  ],
+  "navigationFallback": {
+    "rewrite": "/creator.html",
+    "exclude": ["*.{css,js,png,jpg,gif,ico,svg,woff,woff2,ttf,eot}", "/examples/*"]
+  },
+  "mimeTypes": {
+    ".json": "application/json",
+    ".xml": "application/xml"
+  },
+  "globalHeaders": {
+    "content-security-policy": "default-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net"
+  }
+}
