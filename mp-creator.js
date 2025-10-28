@@ -2011,16 +2011,21 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
         const discoveryConfig = discoveryType ? this.mpData.configurations[discoveryType] || {} : {};
         const targetClass = config.targetClass || config.targetclass || discoveryConfig.targetClass || discoveryConfig.targetclass || 'Windows!Microsoft.Windows.Server.OperatingSystem';
         
+        // For monitors, the ClassID should be the discovered class, not the target class
+        const uniqueId = config.uniqueId || discoveryConfig.uniqueId || 'Application';
+        const discoveredClassId = `${companyId}.${appName}.${uniqueId}.Class`;
+        
         console.log('processFragmentTemplate:', componentType);
         console.log('Target Class from discovery:', discoveryConfig.targetClass);
         console.log('Final Target Class:', targetClass);
+        console.log('Discovered Class ID:', discoveredClassId);
         
         // Create replacement map with better debugging
         const replacements = {
             '##CompanyID##': companyId,
             '##AppName##': appName,
-            '##UniqueID##': config.uniqueId || 'Application',
-            '##ClassID##': targetClass,
+            '##UniqueID##': uniqueId,
+            '##ClassID##': discoveredClassId,
             '##RegKeyPath##': config.regKeyPath || config.regkeypath || 'SOFTWARE\\MyCompany\\MyApplication',
             '##TargetClass##': targetClass,
             '##ServiceName##': config.serviceName || config.servicename || 'YourService',
