@@ -862,7 +862,7 @@ $PropertyBag</ScriptBody>
 </ManagementPackFragment>`,
                 fields: [
                     { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'CheckApplication' },
-                    { id: 'intervalSeconds', label: 'Check Interval (seconds)', type: 'number', required: true, value: '3600', placeholder: '3600' },
+                    { id: 'intervalSeconds', label: 'Run Every (seconds)', type: 'number', required: true, value: '300', placeholder: '300', help: 'How often to run the PowerShell script (in seconds). Example: 300 = 5 minutes, 600 = 10 minutes, 3600 = 1 hour' },
                     { id: 'eventId', label: 'Event ID', type: 'number', required: true, value: '1234', placeholder: '1234', help: 'Event ID for script logging in Operations Manager event log' },
                     { id: 'scriptBody', label: 'PowerShell Script', type: 'textarea', required: true, 
                       placeholder: ' $status=if(Get-Process -Name notepad -ErrorAction SilentlyContinue) { 1 } else {0} \n\nif($status -eq 0) {\n  $PropertyBag.AddValue("State","Bad")\n}\nelseif($status -eq "Warning") {\n  $PropertyBag.AddValue("State","Warning")\n}\nelse\n{\n  $PropertyBag.AddValue("State","Ok")\n}',
@@ -1637,27 +1637,50 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
             
             console.log('Processing field:', id, 'with value:', value);
             
+            // Extra debug for intervalSeconds fields
+            if (id && id.includes('intervalSeconds')) {
+                console.log('*** FOUND intervalSeconds field!');
+                console.log('  - Full ID:', id);
+                console.log('  - Value:', value);
+                console.log('  - Input element:', input);
+            }
+            
             if (id) {
                 // Parse the component type and field from the ID
                 const parts = id.split('-');
                 if (parts.length >= 2) {
-                    // Handle component types with hyphens (like 'registry-key')
                     let componentType, fieldName;
                     
-                    // Find the original component type by checking against known types
-                    // Sort by length (longest first) to match more specific types first
-                    const knownComponentTypes = Object.keys(this.fragmentLibrary)
-                        .sort((a, b) => b.length - a.length);
-                    
-                    const matchingType = knownComponentTypes.find(type => id.startsWith(type + '-'));
-                    
-                    if (matchingType) {
-                        componentType = matchingType;
-                        fieldName = id.substring(matchingType.length + 1); // +1 for the hyphen
+                    // Check if this is a monitor instance ID (contains 'instance')
+                    const instanceIndex = parts.findIndex(part => part === 'instance');
+                    if (instanceIndex > 0 && instanceIndex < parts.length - 1) {
+                        // This is a monitor instance - use the full instance ID as componentType
+                        const fieldIndex = instanceIndex + 2; // Skip 'instance' and the number
+                        if (fieldIndex < parts.length) {
+                            componentType = parts.slice(0, fieldIndex).join('-');
+                            fieldName = parts.slice(fieldIndex).join('-');
+                        } else {
+                            // Fallback if parsing fails
+                            componentType = parts.slice(0, -1).join('-');
+                            fieldName = parts[parts.length - 1];
+                        }
                     } else {
-                        // Fallback to original logic
-                        componentType = parts[0];
-                        fieldName = parts.slice(1).join('-');
+                        // Handle component types with hyphens (like 'registry-key')
+                        // Find the original component type by checking against known types
+                        // Sort by length (longest first) to match more specific types first
+                        const knownComponentTypes = Object.keys(this.fragmentLibrary)
+                            .sort((a, b) => b.length - a.length);
+                        
+                        const matchingType = knownComponentTypes.find(type => id.startsWith(type + '-'));
+                        
+                        if (matchingType) {
+                            componentType = matchingType;
+                            fieldName = id.substring(matchingType.length + 1); // +1 for the hyphen
+                        } else {
+                            // Fallback to original logic
+                            componentType = parts[0];
+                            fieldName = parts.slice(1).join('-');
+                        }
                     }
                     
                     if (!this.mpData.configurations[componentType]) {
@@ -1667,12 +1690,17 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
                     // Save the value even if it's empty (might be intentional)
                     this.mpData.configurations[componentType][fieldName] = value;
                     
-                    console.log('Saved to config:', componentType, fieldName, '=', value);
+                    console.log('Saved to config:', componentType, '/', fieldName, '=', value);
+                    
+                    // Special logging for intervalSeconds
+                    if (fieldName === 'intervalSeconds') {
+                        console.log('*** INTERVAL SECONDS SAVED:', value, 'for component:', componentType);
+                    }
                 }
             }
         });
         
-        console.log('Final configuration data:', this.mpData.configurations);
+        console.log('Final configuration data:', JSON.stringify(this.mpData.configurations, null, 2));
     }
 
     generateMPXML() {
@@ -2006,26 +2034,44 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
         
         const config = this.mpData.configurations[componentType] || {};
         
+        console.log('=== processFragmentTemplate DEBUG ===');
+        console.log('componentType:', componentType);
+        console.log('config object:', config);
+        console.log('config.intervalSeconds:', config.intervalSeconds);
+        console.log('config.intervalseconds:', config.intervalseconds);
+        
         // Get target class from discovery configuration if not in current component
         const discoveryType = this.mpData.selectedComponents.discovery;
         const discoveryConfig = discoveryType ? this.mpData.configurations[discoveryType] || {} : {};
         const targetClass = config.targetClass || config.targetclass || discoveryConfig.targetClass || discoveryConfig.targetclass || 'Windows!Microsoft.Windows.Server.OperatingSystem';
         
-        // For monitors, the ClassID should be the discovered class, not the target class
-        const uniqueId = config.uniqueId || discoveryConfig.uniqueId || 'Application';
-        const discoveredClassId = `${companyId}.${appName}.${uniqueId}.Class`;
+        // Determine the correct uniqueId and target class for monitors
+        let monitorTargetClass;
+        let effectiveUniqueId;
+        
+        // If discovery is selected and not 'skip', use the discovery's uniqueId for monitors
+        if (this.mpData.selectedComponents.discovery && this.mpData.selectedComponents.discovery !== 'skip') {
+            effectiveUniqueId = discoveryConfig.uniqueId || 'Application';
+            monitorTargetClass = `${companyId}.${appName}.${effectiveUniqueId}.Class`;
+        } else {
+            // If no discovery or skip discovery, use the monitor's own uniqueId and Windows target class
+            effectiveUniqueId = config.uniqueId || 'Application';
+            monitorTargetClass = targetClass;
+        }
         
         console.log('processFragmentTemplate:', componentType);
-        console.log('Target Class from discovery:', discoveryConfig.targetClass);
-        console.log('Final Target Class:', targetClass);
-        console.log('Discovered Class ID:', discoveredClassId);
+        console.log('Discovery selected:', this.mpData.selectedComponents.discovery);
+        console.log('Discovery uniqueId:', discoveryConfig.uniqueId);
+        console.log('Monitor uniqueId:', config.uniqueId);
+        console.log('Effective uniqueId for monitor:', effectiveUniqueId);
+        console.log('Monitor Target Class:', monitorTargetClass);
         
         // Create replacement map with better debugging
         const replacements = {
             '##CompanyID##': companyId,
             '##AppName##': appName,
-            '##UniqueID##': uniqueId,
-            '##ClassID##': discoveredClassId,
+            '##UniqueID##': effectiveUniqueId,
+            '##ClassID##': monitorTargetClass,
             '##RegKeyPath##': config.regKeyPath || config.regkeypath || 'SOFTWARE\\MyCompany\\MyApplication',
             '##TargetClass##': targetClass,
             '##ServiceName##': config.serviceName || config.servicename || 'YourService',
@@ -2090,6 +2136,16 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
         // Debug logging to help identify the issue
         console.log('Configuration for', componentType, ':', config);
         console.log('Registry Key Path value:', config.regKeyPath || config.regkeypath);
+        console.log('*** IntervalSeconds replacement value:', config.intervalSeconds || config.frequencySeconds || config.intervalseconds || '300');
+        
+        // FAILSAFE: If intervalSeconds is not in config, try to read it directly from the DOM
+        if (!config.intervalSeconds && !config.intervalseconds && !config.frequencySeconds) {
+            const intervalInput = document.getElementById(`${componentType}-intervalSeconds`);
+            if (intervalInput && intervalInput.value) {
+                config.intervalSeconds = intervalInput.value.trim();
+                console.log('*** FAILSAFE: Read intervalSeconds directly from DOM:', config.intervalSeconds);
+            }
+        }
 
         // Replace all placeholders in the template
         let processedTemplate = template;
