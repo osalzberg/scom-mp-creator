@@ -1780,11 +1780,21 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
         // Add discovery fragment
         if (this.mpData.selectedComponents.discovery && this.mpData.selectedComponents.discovery !== 'skip') {
             const discoveryType = this.mpData.selectedComponents.discovery;
+            console.log('*** DISCOVERY TYPE:', discoveryType);
             const fragment = this.fragmentLibrary[discoveryType];
+            console.log('*** FRAGMENT FOUND:', fragment ? 'YES' : 'NO');
+            console.log('*** FRAGMENT HAS TEMPLATE:', fragment && fragment.template ? 'YES' : 'NO');
             if (fragment && fragment.template) {
+                console.log('*** PROCESSING DISCOVERY TEMPLATE');
                 const processedFragment = this.processFragmentTemplate(discoveryType, fragment.template);
+                console.log('*** PROCESSED FRAGMENT LENGTH:', processedFragment.length);
+                console.log('*** PROCESSED FRAGMENT PREVIEW:', processedFragment.substring(0, 200));
                 allFragments.push(processedFragment);
+            } else {
+                console.error('*** NO TEMPLATE FOR DISCOVERY TYPE:', discoveryType);
             }
+        } else {
+            console.log('*** NO DISCOVERY SELECTED OR SKIP');
         }
         
         // Add monitor fragments
