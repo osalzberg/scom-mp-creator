@@ -728,6 +728,11 @@
     font-weight: 500;
 }
 
+.output-header > div {
+    display: flex;
+    gap: 10px;
+}
+
 .output-area pre {
     background: #1e293b;
     color: #e2e8f0;

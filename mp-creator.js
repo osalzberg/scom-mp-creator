@@ -990,6 +990,7 @@ $PropertyBag</ScriptBody>
                     clearTimeout(this.previewDebounceTimer);
                     this.previewDebounceTimer = setTimeout(() => {
                         this.autoGeneratePreview();
+                        updateDownloadButtons();
                     }, 500); // 500ms debounce
                 }
             }
@@ -998,6 +999,7 @@ $PropertyBag</ScriptBody>
                 clearTimeout(this.previewDebounceTimer);
                 this.previewDebounceTimer = setTimeout(() => {
                     this.autoGeneratePreview();
+                    updateDownloadButtons();
                 }, 500);
             }
         });
@@ -1012,6 +1014,7 @@ $PropertyBag</ScriptBody>
                     // Auto-update preview on step 6
                     if (this.currentStep === 6) {
                         this.autoGeneratePreview();
+                        updateDownloadButtons();
                     }
                 }
             }
@@ -2408,27 +2411,44 @@ ${stringResources.join('\n')}
 
 // Update download button states based on management group name
 function updateDownloadButtons() {
-    const managementGroupField = document.getElementById('management-group-name');
-    const managementGroupName = managementGroupField ? managementGroupField.value.trim() : '';
+    // Check if all required fields are filled
+    let allRequiredFieldsFilled = true;
+    
+    // Check basic info
+    if (!mpCreator || !mpCreator.mpData.basicInfo.companyId || !mpCreator.mpData.basicInfo.appName) {
+        allRequiredFieldsFilled = false;
+    }
+    
+    // Check all required fields in config forms
+    if (allRequiredFieldsFilled) {
+        const requiredInputs = document.querySelectorAll('#component-configs input[required], #component-configs select[required], #component-configs textarea[required]');
+        requiredInputs.forEach(input => {
+            if (!input.value || !input.value.trim()) {
+                allRequiredFieldsFilled = false;
+            }
+        });
+    }
     
     // Get all download-related buttons
-    const downloadButton = document.querySelector('button[onclick="downloadPackage()"]');
+    const downloadButtons = document.querySelectorAll('#download-btn-header, #download-btn-footer');
     
-    if (downloadButton) {
-        if (managementGroupName) {
-            // Enable download button
-            downloadButton.disabled = false;
-            downloadButton.classList.remove('btn--disabled');
-            downloadButton.style.opacity = '1';
-            downloadButton.style.cursor = 'pointer';
-        } else {
-            // Disable download button (make it gray)
-            downloadButton.disabled = true;
-            downloadButton.classList.add('btn--disabled');
-            downloadButton.style.opacity = '0.5';
-            downloadButton.style.cursor = 'not-allowed';
+    downloadButtons.forEach(downloadButton => {
+        if (downloadButton) {
+            if (allRequiredFieldsFilled) {
+                // Enable download button
+                downloadButton.disabled = false;
+                downloadButton.classList.remove('btn--disabled');
+                downloadButton.style.opacity = '1';
+                downloadButton.style.cursor = 'pointer';
+            } else {
+                // Disable download button (make it gray)
+                downloadButton.disabled = true;
+                downloadButton.classList.add('btn--disabled');
+                downloadButton.style.opacity = '0.5';
+                downloadButton.style.cursor = 'not-allowed';
+            }
         }
-    }
+    });
 }
 
 // Global functions
