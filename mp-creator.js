@@ -2453,6 +2453,7 @@ function updateDownloadButtons() {
 
 // Global functions
 let mpCreator;
+let isDownloading = false; // Guard to prevent multiple simultaneous downloads
 
 function nextStep() {
     mpCreator.nextStep();
@@ -2479,6 +2480,11 @@ function generateMP() {
 }
 
 function downloadPackage() {
+    // Prevent multiple simultaneous downloads
+    if (isDownloading) {
+        return;
+    }
+    
     if (!mpCreator) {
         alert('MP Creator not initialized');
         return;
@@ -2492,12 +2498,14 @@ function downloadPackage() {
     }
 
     try {
+        isDownloading = true;
         mpCreator.saveConfigurationData();
         const mpXml = mpCreator.generateMPXML();
         const { companyId, appName } = mpCreator.mpData.basicInfo;
         
         if (!mpXml || !mpXml.trim()) {
             alert('Error generating Management Pack XML. Please check your selections.');
+            isDownloading = false;
             return;
         }
         
@@ -2536,11 +2544,16 @@ try {
         
         setTimeout(() => {
             mpCreator.downloadFile(deployScript, 'Deploy-MP.ps1', 'text/plain');
+            // Reset the guard after downloads complete
+            setTimeout(() => {
+                isDownloading = false;
+            }, 1000);
         }, 500);
         
     } catch (error) {
         console.error('Error downloading package:', error);
         alert('Error downloading package: ' + error.message);
+        isDownloading = false;
     }
 }
 

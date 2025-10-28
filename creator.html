@@ -665,10 +665,10 @@
                         <div class="output-header">
                             <h3>Live Management Pack Preview</h3>
                             <div>
-                                <button type="button" class="btn btn--small" onclick="copyToClipboard()">
+                                <button type="button" class="btn btn--small" onclick="event.stopPropagation(); copyToClipboard()">
                                     <i class="fas fa-copy"></i> Copy
                                 </button>
-                                <button type="button" class="btn btn--small btn--primary" onclick="downloadPackage()" id="download-btn-header">
+                                <button type="button" class="btn btn--small btn--primary" onclick="event.stopPropagation(); downloadPackage()" id="download-btn-header">
                                     <i class="fas fa-download"></i> Download Management Pack
                                 </button>
                             </div>
@@ -678,7 +678,7 @@
                     
                     <div class="form-actions">
                         <button type="button" class="btn btn--secondary" onclick="prevStep()">Previous</button>
-                        <button type="button" class="btn btn--primary" onclick="downloadPackage()" id="download-btn-footer">
+                        <button type="button" class="btn btn--primary" onclick="event.stopPropagation(); downloadPackage()" id="download-btn-footer">
                             <i class="fas fa-download"></i> Download Management Pack
                         </button>
                         <button type="button" class="btn btn--secondary" onclick="startOver()">Start Over</button>
