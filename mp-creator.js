@@ -185,10 +185,60 @@ class MPCreator {
             },
             'wmi-query': {
                 name: 'WMI Query Discovery',
-                template: 'Class.And.Discovery.WMI.Query.mpx',
+                template: `<ManagementPackFragment SchemaVersion="2.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <TypeDefinitions>
+    <EntityTypes>
+      <ClassTypes>
+        <ClassType ID="##CompanyID##.##AppName##.##UniqueID##.Class" Base="Windows!Microsoft.Windows.LocalApplication" Accessibility="Public" Abstract="false" Hosted="true" Singleton="false"></ClassType>
+      </ClassTypes>
+    </EntityTypes>
+  </TypeDefinitions>
+  <Monitoring>
+    <Discoveries>
+      <Discovery ID="##CompanyID##.##AppName##.##UniqueID##.Class.Discovery" Target="##TargetClass##" Enabled="true" ConfirmDelivery="false" Remotable="true" Priority="Normal">
+        <Category>Discovery</Category>
+        <DiscoveryTypes>
+          <DiscoveryClass TypeID="##CompanyID##.##AppName##.##UniqueID##.Class" />
+        </DiscoveryTypes>
+        <DataSource ID="DS" TypeID="Windows!Microsoft.Windows.WmiProviderWithClassSnapshotDataMapper">
+          <NameSpace>##Namespace##</NameSpace>
+          <Query><![CDATA[##WMIQuery##]]></Query>
+          <Frequency>14400</Frequency>
+          <ClassId>$MPElement[Name="##CompanyID##.##AppName##.##UniqueID##.Class"]$</ClassId>
+          <InstanceSettings>
+            <Settings>
+              <Setting>
+                <Name>$MPElement[Name="Windows!Microsoft.Windows.Computer"]/PrincipalName$</Name>
+                <Value>$Target/Host/Property[Type="Windows!Microsoft.Windows.Computer"]/PrincipalName$</Value>
+              </Setting>
+              <Setting>
+                <Name>$MPElement[Name="System!System.Entity"]/DisplayName$</Name>
+                <Value>$Target/Host/Property[Type="Windows!Microsoft.Windows.Computer"]/PrincipalName$</Value>
+              </Setting>
+            </Settings>
+          </InstanceSettings>
+        </DataSource>
+      </Discovery>
+    </Discoveries>
+  </Monitoring>
+  <LanguagePacks>
+    <LanguagePack ID="ENU" IsDefault="true">
+      <DisplayStrings>
+        <DisplayString ElementID="##CompanyID##.##AppName##.##UniqueID##.Class">
+          <Name>##CompanyID## ##AppName## ##UniqueID## Class</Name>
+        </DisplayString>
+        <DisplayString ElementID="##CompanyID##.##AppName##.##UniqueID##.Class.Discovery">
+          <Name>##CompanyID## ##AppName## ##UniqueID## Class Discovery</Name>
+        </DisplayString>
+      </DisplayStrings>
+      <KnowledgeArticles></KnowledgeArticles>
+    </LanguagePack>
+  </LanguagePacks>
+</ManagementPackFragment>`,
                 fields: [
                     { id: 'wmiQuery', label: 'WMI Query', type: 'textarea', required: true, placeholder: 'SELECT * FROM Win32_Service WHERE Name = "YourService"' },
                     { id: 'namespace', label: 'WMI Namespace', type: 'text', required: false, placeholder: 'root\\cimv2', value: 'root\\cimv2' },
+                    { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'WMI' },
                     { id: 'targetClass', label: 'Target Class', type: 'select', options: ['Windows!Microsoft.Windows.Server.OperatingSystem', 'Windows!Microsoft.Windows.Computer'], value: 'Windows!Microsoft.Windows.Server.OperatingSystem' }
                 ]
             },
@@ -2187,8 +2237,60 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
     }
 
     generateWMIDiscovery(className, config) {
-        // Similar implementation for WMI discovery
-        return '    <!-- WMI Discovery not yet implemented -->';
+        const companyId = config.companyId || '##CompanyID##';
+        const appName = config.appName || '##AppName##';
+        const uniqueId = config.uniqueId || 'WMI';
+        const wmiQuery = config.wmiQuery || '##WMIQuery##';
+        const namespace = config.namespace || 'root\\cimv2';
+        const targetClass = config.targetClass || 'Windows!Microsoft.Windows.Server.OperatingSystem';
+        
+        return `  <TypeDefinitions>
+    <EntityTypes>
+      <ClassTypes>
+        <ClassType ID="${companyId}.${appName}.${uniqueId}.Class" Base="Windows!Microsoft.Windows.LocalApplication" Accessibility="Public" Abstract="false" Hosted="true" Singleton="false"></ClassType>
+      </ClassTypes>
+    </EntityTypes>
+  </TypeDefinitions>
+  <Monitoring>
+    <Discoveries>
+      <Discovery ID="${companyId}.${appName}.${uniqueId}.Class.Discovery" Target="${targetClass}" Enabled="true" ConfirmDelivery="false" Remotable="true" Priority="Normal">
+        <Category>Discovery</Category>
+        <DiscoveryTypes>
+          <DiscoveryClass TypeID="${companyId}.${appName}.${uniqueId}.Class" />
+        </DiscoveryTypes>
+        <DataSource ID="DS" TypeID="Windows!Microsoft.Windows.WmiProviderWithClassSnapshotDataMapper">
+          <NameSpace>${namespace}</NameSpace>
+          <Query><![CDATA[${wmiQuery}]]></Query>
+          <Frequency>14400</Frequency>
+          <ClassId>$MPElement[Name="${companyId}.${appName}.${uniqueId}.Class"]$</ClassId>
+          <InstanceSettings>
+            <Settings>
+              <Setting>
+                <Name>$MPElement[Name="Windows!Microsoft.Windows.Computer"]/PrincipalName$</Name>
+                <Value>$Target/Host/Property[Type="Windows!Microsoft.Windows.Computer"]/PrincipalName$</Value>
+              </Setting>
+              <Setting>
+                <Name>$MPElement[Name="System!System.Entity"]/DisplayName$</Name>
+                <Value>$Target/Host/Property[Type="Windows!Microsoft.Windows.Computer"]/PrincipalName$</Value>
+              </Setting>
+            </Settings>
+          </InstanceSettings>
+        </DataSource>
+      </Discovery>
+    </Discoveries>
+  </Monitoring>
+  <LanguagePacks>
+    <LanguagePack ID="ENU" IsDefault="true">
+      <DisplayStrings>
+        <DisplayString ElementID="${companyId}.${appName}.${uniqueId}.Class">
+          <Name>${companyId} ${appName} ${uniqueId} Class</Name>
+        </DisplayString>
+        <DisplayString ElementID="${companyId}.${appName}.${uniqueId}.Class.Discovery">
+          <Name>${companyId} ${appName} ${uniqueId} Class Discovery</Name>
+        </DisplayString>
+      </DisplayStrings>
+    </LanguagePack>
+  </LanguagePacks>`;
     }
 
     generateServiceDiscovery(className, config) {
