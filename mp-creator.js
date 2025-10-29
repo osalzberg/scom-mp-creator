@@ -287,11 +287,11 @@ $DiscoveryData = $momapi.CreateDiscoveryData(0, $SourceId, $ManagedEntityId)
 $NetBIOSName = $ComputerName.Split(".")[0]
 $NetBIOSName = $NetBIOSName.Trim()
 
-$momapi.LogScriptEvent($ScriptName,$EventID,0,"`nScript is starting. `nRunning as ($whoami). `nManagement Group: ($MGName). `nComputerName: ($ComputerName). `nNetBIOSName: ($NetBIOSName). `nDebugLogging: ($DebugLogging). `nComputerNameList: ($ComputerNameList)")
+$momapi.LogScriptEvent($ScriptName,$EventID,0,"\`nScript is starting. \`nRunning as ($whoami). \`nManagement Group: ($MGName). \`nComputerName: ($ComputerName). \`nNetBIOSName: ($NetBIOSName). \`nDebugLogging: ($DebugLogging). \`nComputerNameList: ($ComputerNameList)")
 
 IF ($DebugLogging.ToUpper() -eq "TRUE")
 {
-  $momapi.LogScriptEvent($ScriptName,$EventID,0,"`n This event is being logged because debug Logging was set to: ($DebugLogging)")
+  $momapi.LogScriptEvent($ScriptName,$EventID,0,"\`n This event is being logged because debug Logging was set to: ($DebugLogging)")
 }
 
 $ComputerNameList = $ComputerNameList.Replace(" ","")
@@ -303,14 +303,14 @@ IF ($ComputerNameListArray -contains $NetBIOSName)
   $instance.AddProperty("$MPElement[Name='Windows!Microsoft.Windows.Computer']/PrincipalName$", $ComputerName)
   $instance.AddProperty("$MPElement[Name='System!System.Entity']/DisplayName$", $ComputerName)
   $DiscoveryData.AddInstance($instance)
-  $momapi.LogScriptEvent($ScriptName,$EventID,0,"`n Discovery script is returning discoverydata objects for ($ComputerName).") 	
+  $momapi.LogScriptEvent($ScriptName,$EventID,0,"\`n Discovery script is returning discoverydata objects for ($ComputerName).") 	
 }
 
 $DiscoveryData
 
 $EndTime = Get-Date
 $ScriptTime = ($EndTime - $StartTime).TotalSeconds
-$momapi.LogScriptEvent($ScriptName,$EventID,0,"`n Script Completed. `n Script Runtime: ($ScriptTime) seconds.")
+$momapi.LogScriptEvent($ScriptName,$EventID,0,"\`n Script Completed. \`n Script Runtime: ($ScriptTime) seconds.")
                 </ScriptBody>
                 <Parameters>
                   <Parameter>
