@@ -956,3 +956,63 @@
     line-height: 1.5;
     font-size: 0.95rem;
 }
+
+/* Disclaimer Section */
+.disclaimer {
+    background: #0f172a;
+    padding: 30px 0;
+    margin-top: 0;
+}
+
+.disclaimer__content {
+    display: flex;
+    gap: 15px;
+    align-items: flex-start;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.disclaimer__content i {
+    color: #f59e0b;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.disclaimer__content p {
+    color: #94a3b8;
+    line-height: 1.6;
+    font-size: 0.8rem;
+    margin: 0;
+}
+
+.disclaimer__content strong {
+    color: #cbd5e1;
+    font-weight: 600;
+}
+
+/* Footer */
+.footer {
+    background: #0f172a;
+    padding: 40px 0;
+    text-align: center;
+    margin-top: 80px;
+    border-top: 4px solid #3b82f6;
+}
+
+.footer__credits {
+    padding: 10px 0;
+}
+
+.footer__credits p {
+    color: #94a3b8;
+    font-size: 0.95rem;
+    margin: 0;
+    line-height: 1.6;
+}
+
+.footer__credits strong {
+    color: #e2e8f0;
+    font-weight: 600;
+}

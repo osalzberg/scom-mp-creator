@@ -621,11 +621,226 @@ body {
     line-height: 1.6;
 }
 
+/* Creator Section */
+.creator {
+    padding: 60px 0;
+}
+
+.creator__content {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.creator__header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.creator__header .section__title {
+    font-size: 1.8rem;
+}
+
+.creator__card {
+    background: white;
+    border-radius: 16px;
+    padding: 35px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.creator__name {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 12px;
+}
+
+.creator__name i {
+    font-size: 2.5rem;
+    color: #3b82f6;
+    flex-shrink: 0;
+}
+
+.creator__info h3 {
+    font-size: 1.6rem;
+    color: #1e293b;
+    margin: 0;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.creator__role {
+    font-size: 0.95rem;
+    color: #3b82f6;
+    font-weight: 600;
+    margin-bottom: 15px;
+}
+
+.creator__bio {
+    color: #64748b;
+    line-height: 1.7;
+    font-size: 0.9rem;
+    margin-bottom: 20px;
+}
+
+.creator__linkedin {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: #0077b5;
+    color: white;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
+    transition: all 0.3s ease;
+}
+
+.creator__linkedin:hover {
+    background: #005885;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 119, 181, 0.3);
+}
+
+.creator__linkedin i {
+    font-size: 1.2rem;
+}
+
+/* Advisor Section */
+.advisor__section {
+    max-width: 800px;
+    margin: 50px auto 0;
+    padding-top: 40px;
+    border-top: 2px solid #e2e8f0;
+}
+
+.advisor__title {
+    font-size: 1.1rem;
+    color: #64748b;
+    text-align: center;
+    margin-bottom: 25px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.advisor__card {
+    background: #f8fafc;
+    border-radius: 12px;
+    padding: 30px;
+    border: 1px solid #e2e8f0;
+}
+
+.advisor__name {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.advisor__name i {
+    font-size: 2rem;
+    color: #64748b;
+    flex-shrink: 0;
+}
+
+.advisor__name h4 {
+    font-size: 1.3rem;
+    color: #475569;
+    margin: 0;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.advisor__role {
+    font-size: 0.85rem;
+    color: #64748b;
+    font-weight: 500;
+    margin-bottom: 12px;
+    margin-left: 40px;
+}
+
+.advisor__bio {
+    color: #64748b;
+    line-height: 1.6;
+    font-size: 0.85rem;
+    margin-bottom: 18px;
+}
+
+.advisor__linkedin {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 18px;
+    background: #64748b;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    font-weight: 500;
+    font-size: 0.8rem;
+    transition: all 0.3s ease;
+}
+
+.advisor__linkedin:hover {
+    background: #475569;
+    transform: translateY(-1px);
+}
+
+.advisor__linkedin i {
+    font-size: 1rem;
+}
+
+/* Disclaimer Section */
+.disclaimer {
+    background: #0f172a;
+    padding: 30px 0;
+    margin-top: 0;
+}
+
+.disclaimer__content {
+    display: flex;
+    gap: 15px;
+    align-items: flex-start;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.disclaimer__content i {
+    color: #f59e0b;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.disclaimer__content p {
+    color: #94a3b8;
+    line-height: 1.6;
+    font-size: 0.8rem;
+    margin: 0;
+}
+
+.disclaimer__content strong {
+    color: #cbd5e1;
+    font-weight: 600;
+}
+
 .footer__bottom {
     text-align: center;
     padding-top: 30px;
     border-top: 1px solid #334155;
-    color: #64748b;
+    color: #94a3b8;
+}
+
+.footer__bottom p {
+    margin: 0;
+    font-size: 0.95rem;
+    line-height: 1.6;
+}
+
+.footer__bottom strong {
+    color: #e2e8f0;
+    font-weight: 600;
 }
 
 /* Responsive Design */
@@ -651,6 +866,57 @@ body {
     
     .features {
         grid-template-columns: 1fr;
+    }
+    
+    .creator__card {
+        padding: 30px;
+    }
+    
+    .creator__name {
+        gap: 15px;
+    }
+    
+    .creator__name i {
+        font-size: 2.5rem;
+    }
+    
+    .creator__info h3 {
+        font-size: 1.6rem;
+    }
+    
+    .advisor__card {
+        padding: 25px;
+    }
+    
+    .advisor__name {
+        gap: 12px;
+    }
+    
+    .advisor__name i {
+        font-size: 2rem;
+    }
+    
+    .advisor__name h4 {
+        font-size: 1.3rem;
+    }
+    
+    .advisor__role {
+        margin-left: 35px;
+    }
+    
+    .disclaimer__content {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+    
+    .disclaimer__content i {
+        font-size: 1.1rem;
+        margin: 0 auto;
+    }
+    
+    .disclaimer__content p {
+        font-size: 0.75rem;
     }
     
     .contact__content {
