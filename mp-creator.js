@@ -242,11 +242,147 @@ class MPCreator {
                     { id: 'targetClass', label: 'Target Class', type: 'select', options: ['Windows!Microsoft.Windows.Server.OperatingSystem', 'Windows!Microsoft.Windows.Computer'], value: 'Windows!Microsoft.Windows.Server.OperatingSystem' }
                 ]
             },
-            'service-discovery': {
-                name: 'Service Discovery',
-                template: 'Class.And.Discovery.Service.mpx',
+            'server-name-discovery': {
+                name: 'Discovery by Server Name',
+                template: `<ManagementPackFragment SchemaVersion="2.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <TypeDefinitions>
+    <EntityTypes>
+      <ClassTypes>
+        <ClassType ID="##CompanyID##.##AppName##.##UniqueID##.Class" Accessibility="Public" Abstract="false" Base="Windows!Microsoft.Windows.LocalApplication" Hosted="true" Singleton="false" Extension="false" />
+      </ClassTypes>
+    </EntityTypes>
+    <ModuleTypes>
+      <DataSourceModuleType ID="##CompanyID##.##AppName##.##UniqueID##.Class.Discovery.DS" Accessibility="Internal" Batching="false">
+        <Configuration>
+          <xsd:element name="IntervalSeconds" type="xsd:integer" xmlns:xsd="http://www.w3.org/2001/XMLSchema" />
+          <xsd:element name="SyncTime" type="xsd:string" xmlns:xsd="http://www.w3.org/2001/XMLSchema" />
+          <xsd:element name="TimeoutSeconds" type="xsd:integer" xmlns:xsd="http://www.w3.org/2001/XMLSchema" />
+          <xsd:element name="DebugLogging" type="xsd:boolean" xmlns:xsd="http://www.w3.org/2001/XMLSchema" />
+          <xsd:element name="ComputerNameList" type="xsd:string" xmlns:xsd="http://www.w3.org/2001/XMLSchema" />
+        </Configuration>
+        <OverrideableParameters>
+          <OverrideableParameter ID="IntervalSeconds" Selector="$Config/IntervalSeconds$" ParameterType="int" />
+          <OverrideableParameter ID="SyncTime" Selector="$Config/SyncTime$" ParameterType="string" />
+          <OverrideableParameter ID="TimeoutSeconds" Selector="$Config/TimeoutSeconds$" ParameterType="int" />
+          <OverrideableParameter ID="DebugLogging" Selector="$Config/DebugLogging$" ParameterType="bool" />
+          <OverrideableParameter ID="ComputerNameList" Selector="$Config/ComputerNameList$" ParameterType="string" />
+        </OverrideableParameters>
+        <ModuleImplementation Isolation="Any">
+          <Composite>
+            <MemberModules>
+              <DataSource ID="DS" TypeID="Windows!Microsoft.Windows.TimedPowerShell.DiscoveryProvider">
+                <IntervalSeconds>$Config/IntervalSeconds$</IntervalSeconds>
+                <SyncTime>$Config/SyncTime$</SyncTime>
+                <ScriptName>##CompanyID##.##AppName##.##UniqueID##.Class.Discovery.DS.ps1</ScriptName>
+                <ScriptBody>
+param($SourceId,$ManagedEntityId,[string]$ComputerName,[string]$MGName,$DebugLogging,[string]$ComputerNameList)
+
+$ScriptName = "##CompanyID##.##AppName##.##UniqueID##.Class.Discovery.DS.ps1"
+$EventID = "1240"
+$StartTime = Get-Date
+$whoami = whoami
+$momapi = New-Object -comObject MOM.ScriptAPI
+$DiscoveryData = $momapi.CreateDiscoveryData(0, $SourceId, $ManagedEntityId)
+
+$NetBIOSName = $ComputerName.Split(".")[0]
+$NetBIOSName = $NetBIOSName.Trim()
+
+$momapi.LogScriptEvent($ScriptName,$EventID,0,"`nScript is starting. `nRunning as ($whoami). `nManagement Group: ($MGName). `nComputerName: ($ComputerName). `nNetBIOSName: ($NetBIOSName). `nDebugLogging: ($DebugLogging). `nComputerNameList: ($ComputerNameList)")
+
+IF ($DebugLogging.ToUpper() -eq "TRUE")
+{
+  $momapi.LogScriptEvent($ScriptName,$EventID,0,"`n This event is being logged because debug Logging was set to: ($DebugLogging)")
+}
+
+$ComputerNameList = $ComputerNameList.Replace(" ","")
+[array]$ComputerNameListArray = $ComputerNameList.Split(",")
+
+IF ($ComputerNameListArray -contains $NetBIOSName)
+{
+  $instance = $DiscoveryData.CreateClassInstance("$MPElement[Name='##CompanyID##.##AppName##.##UniqueID##.Class']$")
+  $instance.AddProperty("$MPElement[Name='Windows!Microsoft.Windows.Computer']/PrincipalName$", $ComputerName)
+  $instance.AddProperty("$MPElement[Name='System!System.Entity']/DisplayName$", $ComputerName)
+  $DiscoveryData.AddInstance($instance)
+  $momapi.LogScriptEvent($ScriptName,$EventID,0,"`n Discovery script is returning discoverydata objects for ($ComputerName).") 	
+}
+
+$DiscoveryData
+
+$EndTime = Get-Date
+$ScriptTime = ($EndTime - $StartTime).TotalSeconds
+$momapi.LogScriptEvent($ScriptName,$EventID,0,"`n Script Completed. `n Script Runtime: ($ScriptTime) seconds.")
+                </ScriptBody>
+                <Parameters>
+                  <Parameter>
+                    <Name>SourceId</Name>
+                    <Value>$MPElement$</Value>
+                  </Parameter>
+                  <Parameter>
+                    <Name>ManagedEntityId</Name>
+                    <Value>$Target/Id$</Value>
+                  </Parameter>
+                  <Parameter>
+                    <Name>ComputerName</Name>
+                    <Value>$Target/Host/Property[Type="Windows!Microsoft.Windows.Computer"]/PrincipalName$</Value>
+                  </Parameter>
+                  <Parameter>
+                    <Name>MGName</Name>
+                    <Value>$Target/ManagementGroup/Name$</Value>
+                  </Parameter>
+                  <Parameter>
+                    <Name>DebugLogging</Name>
+                    <Value>$Config/DebugLogging$</Value>
+                  </Parameter>
+                  <Parameter>
+                    <Name>ComputerNameList</Name>
+                    <Value>$Config/ComputerNameList$</Value>
+                  </Parameter>
+                </Parameters>
+                <TimeoutSeconds>$Config/TimeoutSeconds$</TimeoutSeconds>
+              </DataSource>
+            </MemberModules>
+            <Composition>
+              <Node ID="DS" />
+            </Composition>
+          </Composite>
+        </ModuleImplementation>
+        <OutputType>System!System.Discovery.Data</OutputType>
+      </DataSourceModuleType>
+    </ModuleTypes>	
+  </TypeDefinitions>
+  <Monitoring>
+    <Discoveries>
+      <Discovery ID="##CompanyID##.##AppName##.##UniqueID##.Class.Discovery" Enabled="false" Target="##TargetClass##" ConfirmDelivery="false" Remotable="true" Priority="Normal">
+        <Category>Discovery</Category>
+        <DiscoveryTypes>
+          <DiscoveryClass TypeID="##CompanyID##.##AppName##.##UniqueID##.Class" />
+        </DiscoveryTypes>
+        <DataSource ID="DS" TypeID="##CompanyID##.##AppName##.##UniqueID##.Class.Discovery.DS">
+          <IntervalSeconds>86333</IntervalSeconds>
+          <SyncTime />
+          <TimeoutSeconds>120</TimeoutSeconds>
+          <DebugLogging>false</DebugLogging>
+          <ComputerNameList>##ComputerNameList##</ComputerNameList>
+        </DataSource>
+      </Discovery>
+    </Discoveries>
+  </Monitoring>
+  <LanguagePacks>
+    <LanguagePack ID="ENU" IsDefault="true">
+      <DisplayStrings>
+        <DisplayString ElementID="##CompanyID##.##AppName##.##UniqueID##.Class">
+          <Name>##CompanyID## ##AppName## ##UniqueID## Class</Name>
+        </DisplayString>
+        <DisplayString ElementID="##CompanyID##.##AppName##.##UniqueID##.Class.Discovery">
+          <Name>##CompanyID## ##AppName## ##UniqueID## Class Discovery</Name>
+        </DisplayString>
+      </DisplayStrings>
+    </LanguagePack>
+  </LanguagePacks>  
+</ManagementPackFragment>`,
                 fields: [
-                    { id: 'serviceName', label: 'Service Name', type: 'text', required: true, placeholder: 'W3SVC' },
+                    { id: 'computerNameList', label: 'Computer Name List (comma-separated)', type: 'textarea', required: true, placeholder: 'SERVER1,SERVER2,SERVER3' },
+                    { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'ServerGroup' },
                     { id: 'targetClass', label: 'Target Class', type: 'select', options: ['Windows!Microsoft.Windows.Server.OperatingSystem', 'Windows!Microsoft.Windows.Computer'], value: 'Windows!Microsoft.Windows.Server.OperatingSystem' }
                 ]
             },
@@ -2153,6 +2289,7 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
             '##ServiceName##': config.serviceName || config.servicename || 'YourService',
             '##WMIQuery##': config.wmiQuery || config.wmiquery || 'SELECT * FROM Win32_Service WHERE Name = "YourService"',
             '##Namespace##': config.namespace || 'root\\cimv2',
+            '##ComputerNameList##': config.computerNameList || config.computernamelist || 'SERVER1,SERVER2',
             '##ScriptType##': config.scriptType || config.scripttype || 'PowerShell',
             '##ScriptBody##': config.scriptBody || config.scriptbody || '# Enter your script here',
             '##SCRIPT_BODY##': config.scriptBody || config.scriptbody || ' $status=if(Get-Process -Name notepad -ErrorAction SilentlyContinue) { 1 } else {0} \n\nif($status -eq 0) {\n  $PropertyBag.AddValue("State","Bad")\n}\nelseif($status -eq "Warning") {\n  $PropertyBag.AddValue("State","Warning")\n}\nelse\n{\n  $PropertyBag.AddValue("State","Ok")\n}',
