@@ -725,69 +725,71 @@ body {
 }
 
 .advisor__card {
-    background: #f8fafc;
-    border-radius: 12px;
+    background: white;
+    border-radius: 16px;
     padding: 30px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.07);
     border: 1px solid #e2e8f0;
+    margin-bottom: 20px;
 }
 
 .advisor__name {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 8px;
+    gap: 15px;
+    margin-bottom: 12px;
 }
 
 .advisor__name i {
-    font-size: 2rem;
-    color: #64748b;
+    font-size: 2.5rem;
+    color: #3b82f6;
     flex-shrink: 0;
 }
 
 .advisor__name h4 {
-    font-size: 1.3rem;
-    color: #475569;
+    font-size: 1.6rem;
+    color: #1e293b;
     margin: 0;
-    font-weight: 600;
+    font-weight: 700;
     line-height: 1.2;
 }
 
 .advisor__role {
-    font-size: 0.85rem;
-    color: #64748b;
-    font-weight: 500;
-    margin-bottom: 12px;
-    margin-left: 40px;
+    font-size: 0.95rem;
+    color: #3b82f6;
+    font-weight: 600;
+    margin-bottom: 15px;
 }
 
 .advisor__bio {
     color: #64748b;
-    line-height: 1.6;
-    font-size: 0.85rem;
-    margin-bottom: 18px;
+    line-height: 1.7;
+    font-size: 0.9rem;
+    margin-bottom: 20px;
 }
 
 .advisor__linkedin {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 8px 18px;
-    background: #64748b;
+    gap: 8px;
+    padding: 10px 20px;
+    background: #0077b5;
     color: white;
     text-decoration: none;
-    border-radius: 6px;
-    font-weight: 500;
-    font-size: 0.8rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.85rem;
     transition: all 0.3s ease;
 }
 
 .advisor__linkedin:hover {
-    background: #475569;
-    transform: translateY(-1px);
+    background: #005885;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 119, 181, 0.3);
 }
 
 .advisor__linkedin i {
-    font-size: 1rem;
+    font-size: 1.2rem;
 }
 
 /* Disclaimer Section */
