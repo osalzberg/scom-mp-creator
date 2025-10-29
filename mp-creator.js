@@ -339,15 +339,6 @@ $momapi.LogScriptEvent($ScriptName,$EventID,0,"\`n Script Completed. \`n Script 
                     { id: 'targetClass', label: 'Target Class', type: 'select', options: ['Windows!Microsoft.Windows.Server.OperatingSystem', 'Windows!Microsoft.Windows.Computer'], value: 'Windows!Microsoft.Windows.Server.OperatingSystem' }
                 ]
             },
-            'script-discovery': {
-                name: 'Script Discovery',
-                template: 'Class.And.Discovery.Script.mpx',
-                fields: [
-                    { id: 'scriptType', label: 'Script Type', type: 'select', options: ['PowerShell', 'VBScript'], value: 'PowerShell' },
-                    { id: 'scriptBody', label: 'Script Content', type: 'textarea', required: true, placeholder: 'Enter your discovery script here...' },
-                    { id: 'targetClass', label: 'Target Class', type: 'select', options: ['Windows!Microsoft.Windows.Server.OperatingSystem', 'Windows!Microsoft.Windows.Computer'], value: 'Windows!Microsoft.Windows.Server.OperatingSystem' }
-                ]
-            },
             'service-monitor': {
                 name: 'Service Monitor',
                 template: 'Monitor.Service.WithAlert.mpx',
