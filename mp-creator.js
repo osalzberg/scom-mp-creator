@@ -339,22 +339,32 @@ $momapi.LogScriptEvent($ScriptName,$EventID,0,"\`n Script Completed. \`n Script 
                     { id: 'targetClass', label: 'Target Class', type: 'select', options: ['Windows!Microsoft.Windows.Server.OperatingSystem', 'Windows!Microsoft.Windows.Computer'], value: 'Windows!Microsoft.Windows.Server.OperatingSystem' }
                 ]
             },
-            'service-monitor': {
-                name: 'Service Monitor',
-                template: 'Monitor.Service.WithAlert.mpx',
+            'script-discovery': {
+                name: 'Script Discovery',
+                template: 'Class.And.Discovery.Script.mpx',
                 fields: [
-                    { id: 'serviceName', label: 'Service Name', type: 'text', required: true, placeholder: 'W3SVC' },
-                    { id: 'alertPriority', label: 'Alert Priority', type: 'select', options: ['Low', 'Normal', 'High'], value: 'Normal' },
-                    { id: 'alertSeverity', label: 'Alert Severity', type: 'select', options: ['Information', 'Warning', 'Error'], value: 'Error' }
+                    { id: 'scriptType', label: 'Script Type', type: 'select', options: ['PowerShell', 'VBScript'], value: 'PowerShell' },
+                    { id: 'scriptBody', label: 'Script Content', type: 'textarea', required: true, placeholder: 'Enter your discovery script here...' },
+                    { id: 'targetClass', label: 'Target Class', type: 'select', options: ['Windows!Microsoft.Windows.Server.OperatingSystem', 'Windows!Microsoft.Windows.Computer'], value: 'Windows!Microsoft.Windows.Server.OperatingSystem' }
                 ]
             },
-            'service-monitor-no-alert': {
-                name: 'Service Monitor (No Alert)',
+            'service-monitor': {
+                name: 'Service Monitor',
                 template: `<ManagementPackFragment SchemaVersion="2.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <Monitoring>
     <Monitors>
       <UnitMonitor ID="##CompanyID##.##AppName##.##UniqueID##.Service.Monitor" Accessibility="Public" Enabled="true" Target="##ClassID##" ParentMonitorID="Health!System.Health.AvailabilityState" Remotable="true" Priority="Normal" TypeID="Windows!Microsoft.Windows.CheckNTServiceStateMonitorType" ConfirmDelivery="false">
         <Category>AvailabilityHealth</Category>
+        <AlertSettings AlertMessage="##CompanyID##.##AppName##.##UniqueID##.Service.Monitor.AlertMessage">
+          <AlertOnState>Warning</AlertOnState>
+          <AutoResolve>true</AutoResolve>
+          <AlertPriority>##AlertPriority##</AlertPriority>
+          <AlertSeverity>##AlertSeverity##</AlertSeverity>
+          <AlertParameters>
+            <AlertParameter1>$Data/Context/Property[@Name='Name']$</AlertParameter1>
+            <AlertParameter2>$Target/Host/Property[Type="Windows!Microsoft.Windows.Computer"]/PrincipalName$</AlertParameter2>
+          </AlertParameters>
+        </AlertSettings>
         <OperationalStates>
           <OperationalState ID="Running" MonitorTypeStateID="Running" HealthState="Success" />
           <OperationalState ID="NotRunning" MonitorTypeStateID="NotRunning" HealthState="Warning" />
@@ -367,19 +377,36 @@ $momapi.LogScriptEvent($ScriptName,$EventID,0,"\`n Script Completed. \`n Script 
       </UnitMonitor>
     </Monitors>
   </Monitoring>
+  <Presentation>
+    <StringResources>
+      <StringResource ID="##CompanyID##.##AppName##.##UniqueID##.Service.Monitor.AlertMessage" />
+    </StringResources>
+  </Presentation>
   <LanguagePacks>
     <LanguagePack ID="ENU" IsDefault="true">
       <DisplayStrings>
         <DisplayString ElementID="##CompanyID##.##AppName##.##UniqueID##.Service.Monitor">
           <Name>##CompanyID## ##AppName## ##ServiceName## Service Monitor</Name>
         </DisplayString>
+        <DisplayString ElementID="##CompanyID##.##AppName##.##UniqueID##.Service.Monitor" SubElementID="Running">
+          <Name>Running</Name>
+        </DisplayString>
+        <DisplayString ElementID="##CompanyID##.##AppName##.##UniqueID##.Service.Monitor" SubElementID="NotRunning">
+          <Name>Not Running</Name>
+        </DisplayString>
+        <DisplayString ElementID="##CompanyID##.##AppName##.##UniqueID##.Service.Monitor.AlertMessage">
+          <Name>##AppName## ##ServiceName## service is not running</Name>
+          <Description>Service {0} is not running on {1}</Description>
+        </DisplayString>
       </DisplayStrings>
     </LanguagePack>
   </LanguagePacks>
 </ManagementPackFragment>`,
                 fields: [
-                    { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'W3SVC' },
-                    { id: 'serviceName', label: 'Service Name', type: 'text', required: true, placeholder: 'W3SVC', help: 'Short name of the service as seen in the registry' }
+                    { id: 'serviceName', label: 'Service Name', type: 'text', required: true, placeholder: 'W3SVC' },
+                    { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'WebService' },
+                    { id: 'alertPriority', label: 'Alert Priority', type: 'select', options: ['Low', 'Normal', 'High'], value: 'Normal' },
+                    { id: 'alertSeverity', label: 'Alert Severity', type: 'select', options: ['Information', 'Warning', 'Error'], value: 'Error' }
                 ]
             },
             'performance-monitor': {
@@ -1917,7 +1944,9 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
                 const fragment = this.fragmentLibrary[monitorType];
                 if (fragment && fragment.template) {
                     const processedFragment = this.processFragmentTemplate(instanceId, fragment.template, monitorType);
-                    allFragments.push(processedFragment);
+                    if (processedFragment && processedFragment.trim().length > 0) {
+                        allFragments.push(processedFragment);
+                    }
                 } else {
                     console.error('No template found for monitor:', monitorType);
                 }
@@ -1962,6 +1991,10 @@ ${languagePacks ? `${languagePacks}` : ''}
         let displayStrings = [];
         
         fragments.forEach((fragmentXml, index) => {
+            if (!fragmentXml || fragmentXml.trim().length === 0) {
+                console.error('Fragment', index, 'is empty or null');
+                return;
+            }
             try {
                 // Parse the fragment XML
                 const parser = new DOMParser();
@@ -1970,7 +2003,8 @@ ${languagePacks ? `${languagePacks}` : ''}
                 // Check for parsing errors
                 const parserError = doc.querySelector('parsererror');
                 if (parserError) {
-                    console.error('XML Parse Error:', parserError.textContent);
+                    console.error('XML Parse Error in fragment', index, ':', parserError.textContent);
+                    console.error('Fragment content:', fragmentXml);
                     return;
                 }
                 
@@ -2212,14 +2246,29 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
         let monitorTargetClass;
         let effectiveUniqueId;
         
-        // If discovery is selected and not 'skip', use the discovery's uniqueId for monitors
-        if (this.mpData.selectedComponents.discovery && this.mpData.selectedComponents.discovery !== 'skip') {
-            effectiveUniqueId = discoveryConfig.uniqueId || 'Application';
-            monitorTargetClass = `${companyId}.${appName}.${effectiveUniqueId}.Class`;
+        // Check if this is a monitor instance (baseMonitorType is passed)
+        if (baseMonitorType) {
+            // For monitors, check if they have their own uniqueId first
+            if (config.uniqueId || config.uniqueid) {
+                effectiveUniqueId = config.uniqueId || config.uniqueid;
+            } else if (this.mpData.selectedComponents.discovery && this.mpData.selectedComponents.discovery !== 'skip') {
+                // If no uniqueId in monitor config, use discovery's uniqueId
+                effectiveUniqueId = discoveryConfig.uniqueId || 'Application';
+            } else {
+                // Default fallback
+                effectiveUniqueId = 'Application';
+            }
+            
+            // Determine target class for monitor
+            if (this.mpData.selectedComponents.discovery && this.mpData.selectedComponents.discovery !== 'skip') {
+                monitorTargetClass = `${companyId}.${appName}.${discoveryConfig.uniqueId || 'Application'}.Class`;
+            } else {
+                monitorTargetClass = targetClass;
+            }
         } else {
-            // If no discovery or skip discovery, use the monitor's own uniqueId and Windows target class
-            effectiveUniqueId = config.uniqueId || 'Application';
-            monitorTargetClass = targetClass;
+            // For discoveries and other components
+            effectiveUniqueId = config.uniqueId || config.uniqueid || 'Application';
+            monitorTargetClass = `${companyId}.${appName}.${effectiveUniqueId}.Class`;
         }
         
         // Create replacement map
@@ -2303,7 +2352,7 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
         for (const [placeholder, value] of Object.entries(replacements)) {
             processedTemplate = processedTemplate.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value);
         }
-
+        
         return processedTemplate;
     }
 
@@ -2387,35 +2436,21 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
     generateMonitorsSection() {
         let monitors = [];
         
-        this.mpData.selectedComponents.monitors.forEach(monitorType => {
-            const config = this.mpData.configurations[monitorType] || {};
+        this.mpData.selectedComponents.monitors.forEach(monitorInstance => {
+            const monitorType = monitorInstance.type;
+            const instanceId = monitorInstance.instanceId;
+            const fragment = this.fragmentLibrary[monitorType];
             
-            switch (monitorType) {
-                case 'service-monitor':
-                    monitors.push(this.generateServiceMonitor(config));
-                    break;
-                case 'performance-monitor':
-                    monitors.push(this.generatePerformanceMonitor(config));
-                    break;
-                case 'event-log-monitor':
-                    monitors.push(this.generateEventLogMonitor(config));
-                    break;
-                case 'script-monitor':
-                    monitors.push(this.generateScriptMonitor(config));
-                    break;
-                case 'port-monitor':
-                    monitors.push(this.generatePortMonitor(config));
-                    break;
-                case 'registry-monitor':
-                    monitors.push(this.generateRegistryMonitor(config));
-                    break;
+            if (fragment && fragment.template) {
+                const processedFragment = this.processFragmentTemplate(instanceId, fragment.template, monitorType);
+                if (processedFragment) {
+                    monitors.push(processedFragment);
+                }
             }
         });
 
         if (monitors.length > 0) {
-            return `    <Monitors>
-${monitors.join('\n')}
-    </Monitors>`;
+            return monitors.join('\n');
         }
         
         return '';
