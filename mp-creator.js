@@ -2237,6 +2237,13 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
         
         const config = this.mpData.configurations[componentType] || {};
         
+        // Debug logging for process-monitor
+        if (baseMonitorType === 'process-monitor') {
+            console.log('Process Monitor Config Debug:');
+            console.log('componentType:', componentType);
+            console.log('config:', config);
+        }
+        
         // Get target class from discovery configuration if not in current component
         const discoveryType = this.mpData.selectedComponents.discovery;
         const discoveryConfig = discoveryType ? this.mpData.configurations[discoveryType] || {} : {};
