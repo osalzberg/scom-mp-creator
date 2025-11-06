@@ -1185,6 +1185,46 @@ $PropertyBag</ScriptBody>
         const discoveryType = card.dataset.discovery;
         this.mpData.selectedComponents.discovery = discoveryType;
         
+        // Show target class selection if skip discovery is selected
+        const skipClassContainer = document.getElementById('skip-discovery-class-container');
+        if (discoveryType === 'skip') {
+            if (!skipClassContainer) {
+                // Create the target class selection dropdown
+                const container = document.createElement('div');
+                container.id = 'skip-discovery-class-container';
+                container.style.cssText = 'margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px;';
+                container.innerHTML = `
+                    <h4 style="margin-bottom: 15px; color: #2c3e50;">Select Target Class</h4>
+                    <div class="form-group">
+                        <label for="skip-target-class">Target Class</label>
+                        <select id="skip-target-class" class="form-control" required>
+                            <option value="">-- Select a Target Class --</option>
+                            <option value="Windows!Microsoft.Windows.Server.OperatingSystem">Windows Server Operating System</option>
+                            <option value="Windows!Microsoft.Windows.Computer">Windows Computer</option>
+                            <option value="Windows!Microsoft.Windows.LogicalDisk">Windows Logical Disk</option>
+                            <option value="Windows!Microsoft.Windows.Server.6.2.OperatingSystem">Windows Server 2012+ Operating System</option>
+                            <option value="Windows!Microsoft.Windows.Server.2016.OperatingSystem">Windows Server 2016+ Operating System</option>
+                            <option value="Windows!Microsoft.Windows.Client.OperatingSystem">Windows Client Operating System</option>
+                            <option value="System!System.Computer">System Computer</option>
+                        </select>
+                        <small style="color: #666; margin-top: 5px; display: block;">Select the class that your monitors/rules will target</small>
+                    </div>
+                `;
+                card.parentElement.insertAdjacentElement('afterend', container);
+                
+                // Add change event listener
+                document.getElementById('skip-target-class').addEventListener('change', (e) => {
+                    this.mpData.configurations.skip = this.mpData.configurations.skip || {};
+                    this.mpData.configurations.skip.targetClass = e.target.value;
+                });
+            }
+        } else {
+            // Remove the container if switching away from skip
+            if (skipClassContainer) {
+                skipClassContainer.remove();
+            }
+        }
+        
         const nextBtn = document.getElementById('next-discovery');
         if (nextBtn) {
             nextBtn.disabled = false;
@@ -2247,7 +2287,12 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
         // Get target class from discovery configuration if not in current component
         const discoveryType = this.mpData.selectedComponents.discovery;
         const discoveryConfig = discoveryType ? this.mpData.configurations[discoveryType] || {} : {};
-        const targetClass = config.targetClass || config.targetclass || discoveryConfig.targetClass || discoveryConfig.targetclass || 'Windows!Microsoft.Windows.Server.OperatingSystem';
+        // Check for skip configuration target class
+        const skipConfig = this.mpData.configurations.skip || {};
+        const targetClass = config.targetClass || config.targetclass || 
+                           discoveryConfig.targetClass || discoveryConfig.targetclass || 
+                           skipConfig.targetClass || 
+                           'Windows!Microsoft.Windows.Server.OperatingSystem';
         
         // Determine the correct uniqueId and target class for monitors
         let monitorTargetClass;
@@ -2270,7 +2315,8 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
             if (this.mpData.selectedComponents.discovery && this.mpData.selectedComponents.discovery !== 'skip') {
                 monitorTargetClass = `${companyId}.${appName}.${discoveryConfig.uniqueId || 'Application'}.Class`;
             } else {
-                monitorTargetClass = targetClass;
+                // Use the selected target class from skip configuration
+                monitorTargetClass = skipConfig.targetClass || targetClass;
             }
         } else {
             // For discoveries and other components
