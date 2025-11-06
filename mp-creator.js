@@ -1268,19 +1268,26 @@ $PropertyBag</ScriptBody>
         }
         
         const nextBtn = document.getElementById('next-discovery');
+        console.log('Bottom of selectDiscoveryCard - discoveryType:', discoveryType);
+        console.log('Bottom of selectDiscoveryCard - nextBtn found:', !!nextBtn);
         if (nextBtn) {
             // For skip discovery, disable Next button until target class is selected
             if (discoveryType === 'skip') {
+                console.log('Setting up setTimeout to disable Next button for skip discovery');
                 // Use setTimeout to ensure the dropdown element is in the DOM
                 setTimeout(() => {
                     const targetClassSelect = document.getElementById('skip-target-class');
                     const btn = document.getElementById('next-discovery');
+                    console.log('setTimeout callback - targetClassSelect found:', !!targetClassSelect);
+                    console.log('setTimeout callback - targetClassSelect value:', targetClassSelect?.value);
                     if (btn) {
                         btn.disabled = !targetClassSelect || !targetClassSelect.value;
-                        console.log('Next button disabled state:', btn.disabled);
+                        console.log('Next button disabled state set to:', btn.disabled);
+                        console.log('Next button actual disabled attribute:', btn.getAttribute('disabled'));
                     }
-                }, 0);
+                }, 10);
             } else {
+                console.log('Not skip discovery, enabling Next button');
                 nextBtn.disabled = false;
             }
         }
