@@ -634,6 +634,18 @@ body {
     line-height: 1.6;
 }
 
+.footer__credits {
+    text-align: center;
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.footer__credits p {
+    color: #94a3b8;
+    font-size: 0.9rem;
+}
+
 /* Creator Section */
 .creator {
     padding: 60px 0;
