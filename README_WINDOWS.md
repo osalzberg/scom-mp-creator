@@ -40,6 +40,13 @@ SCOM-MP-Creator/
 ├── mp-creator.css          - Application styles
 ├── styles.css              - Landing page styles
 ├── script.js               - Landing page scripts
+├── assets/
+│   ├── fontawesome/        - Font Awesome icons (offline)
+│   │   └── all.min.css
+│   └── webfonts/           - Font Awesome font files
+│       ├── fa-solid-900.woff2
+│       ├── fa-brands-400.woff2
+│       └── fa-regular-400.woff2
 ├── start-server.bat        - Windows batch file to start server
 ├── Start-Server.ps1        - PowerShell script to start server
 ├── OFFLINE_INSTALLATION.md - Detailed installation guide
@@ -109,7 +116,7 @@ If you don't have Python installed:
 - **Solution**: Check that your browser allows downloads from local files. Try a different browser (Chrome or Edge work best)
 
 ### "Fonts or icons look weird"
-- **Solution**: This is normal offline. The app uses CDN resources for fonts/icons when online, but works fine without them
+- **Solution**: Icons and fonts are now included offline! If you still see issues, refresh the page (F5)
 
 ## Security & Privacy
 
@@ -121,7 +128,7 @@ If you don't have Python installed:
 
 ## File Size
 
-Total: ~250 KB - Very lightweight!
+Total: ~500 KB (includes all icons and fonts for offline use)
 
 ## Common Browser Shortcuts
 
