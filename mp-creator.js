@@ -1210,10 +1210,12 @@ $PropertyBag</ScriptBody>
                         <small style="color: #666; margin-top: 5px; display: block;">Select the class that your monitors/rules will target</small>
                     </div>
                 `;
-                // Insert after the discovery-grid div (parent of all cards)
-                const discoveryGrid = card.closest('.discovery-grid');
-                if (discoveryGrid) {
-                    discoveryGrid.insertAdjacentElement('afterend', container);
+                // Insert after the discovery-options div (parent of all cards)
+                const discoveryOptions = card.closest('.discovery-options');
+                if (discoveryOptions) {
+                    discoveryOptions.insertAdjacentElement('afterend', container);
+                } else {
+                    console.error('Could not find discovery-options container');
                 }
                 
                 // Add change event listener
