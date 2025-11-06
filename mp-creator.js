@@ -1221,6 +1221,12 @@ $PropertyBag</ScriptBody>
                 if (discoveryOptions) {
                     discoveryOptions.insertAdjacentElement('afterend', container);
                     console.log('Dropdown inserted successfully');
+                    
+                    // Immediately disable the Next button when dropdown is created
+                    const nextBtn = document.getElementById('next-discovery');
+                    if (nextBtn) {
+                        nextBtn.disabled = true;
+                    }
                 } else {
                     console.error('Could not find discovery-options container');
                 }
@@ -1229,6 +1235,13 @@ $PropertyBag</ScriptBody>
                 document.getElementById('skip-target-class').addEventListener('change', (e) => {
                     this.mpData.configurations.skip = this.mpData.configurations.skip || {};
                     this.mpData.configurations.skip.targetClass = e.target.value;
+                    
+                    // Remove any error message when user selects a class
+                    const container = document.getElementById('skip-discovery-class-container');
+                    const existingError = container ? container.querySelector('.error-message') : null;
+                    if (existingError) {
+                        existingError.remove();
+                    }
                     
                     // Enable the Next button when a class is selected
                     const nextBtn = document.getElementById('next-discovery');
@@ -1239,6 +1252,13 @@ $PropertyBag</ScriptBody>
             } else {
                 // Container already exists, just make sure it's visible
                 skipClassContainer.style.display = 'block';
+                
+                // Make sure Next button is disabled if no class is selected
+                const targetClassSelect = document.getElementById('skip-target-class');
+                const nextBtn = document.getElementById('next-discovery');
+                if (nextBtn && targetClassSelect) {
+                    nextBtn.disabled = !targetClassSelect.value;
+                }
             }
         } else {
             // Hide the container if switching away from skip
@@ -1251,8 +1271,15 @@ $PropertyBag</ScriptBody>
         if (nextBtn) {
             // For skip discovery, disable Next button until target class is selected
             if (discoveryType === 'skip') {
-                const targetClassSelect = document.getElementById('skip-target-class');
-                nextBtn.disabled = !targetClassSelect || !targetClassSelect.value;
+                // Use setTimeout to ensure the dropdown element is in the DOM
+                setTimeout(() => {
+                    const targetClassSelect = document.getElementById('skip-target-class');
+                    const btn = document.getElementById('next-discovery');
+                    if (btn) {
+                        btn.disabled = !targetClassSelect || !targetClassSelect.value;
+                        console.log('Next button disabled state:', btn.disabled);
+                    }
+                }, 0);
             } else {
                 nextBtn.disabled = false;
             }
@@ -1579,8 +1606,23 @@ $PropertyBag</ScriptBody>
             // If skip discovery is selected, validate that a target class is chosen
             if (discoveryType === 'skip') {
                 const targetClassSelect = document.getElementById('skip-target-class');
+                const container = document.getElementById('skip-discovery-class-container');
+                
+                // Remove any existing error message
+                const existingError = container ? container.querySelector('.error-message') : null;
+                if (existingError) {
+                    existingError.remove();
+                }
+                
                 if (!targetClassSelect || !targetClassSelect.value) {
-                    alert('Please select a target class for your monitors when skipping discovery.');
+                    // Show error message below the dropdown
+                    if (container) {
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'error-message';
+                        errorDiv.style.cssText = 'margin-top: 10px; font-weight: 500;';
+                        errorDiv.textContent = 'Please select a target class for your monitors before proceeding.';
+                        container.appendChild(errorDiv);
+                    }
                     return false;
                 }
             }
