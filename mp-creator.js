@@ -1179,16 +1179,21 @@ $PropertyBag</ScriptBody>
     }
 
     selectDiscoveryCard(card) {
+        console.log('selectDiscoveryCard called with:', card);
         document.querySelectorAll('.discovery-card').forEach(c => c.classList.remove('selected'));
         card.classList.add('selected');
         
         const discoveryType = card.dataset.discovery;
+        console.log('Discovery type selected:', discoveryType);
         this.mpData.selectedComponents.discovery = discoveryType;
         
         // Show target class selection if skip discovery is selected
         let skipClassContainer = document.getElementById('skip-discovery-class-container');
+        console.log('Existing skip container:', skipClassContainer);
         if (discoveryType === 'skip') {
+            console.log('Skip discovery selected, creating dropdown...');
             if (!skipClassContainer) {
+                console.log('No existing container, creating new one...');
                 // Create the target class selection dropdown
                 const container = document.createElement('div');
                 container.id = 'skip-discovery-class-container';
@@ -1212,8 +1217,10 @@ $PropertyBag</ScriptBody>
                 `;
                 // Insert after the discovery-options div (parent of all cards)
                 const discoveryOptions = card.closest('.discovery-options');
+                console.log('Found discovery-options container:', discoveryOptions);
                 if (discoveryOptions) {
                     discoveryOptions.insertAdjacentElement('afterend', container);
+                    console.log('Dropdown inserted successfully');
                 } else {
                     console.error('Could not find discovery-options container');
                 }
