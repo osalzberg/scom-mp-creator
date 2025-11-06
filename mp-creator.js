@@ -1179,21 +1179,16 @@ $PropertyBag</ScriptBody>
     }
 
     selectDiscoveryCard(card) {
-        console.log('selectDiscoveryCard called with:', card);
         document.querySelectorAll('.discovery-card').forEach(c => c.classList.remove('selected'));
         card.classList.add('selected');
         
         const discoveryType = card.dataset.discovery;
-        console.log('Discovery type selected:', discoveryType);
         this.mpData.selectedComponents.discovery = discoveryType;
         
         // Show target class selection if skip discovery is selected
         let skipClassContainer = document.getElementById('skip-discovery-class-container');
-        console.log('Existing skip container:', skipClassContainer);
         if (discoveryType === 'skip') {
-            console.log('Skip discovery selected, creating dropdown...');
             if (!skipClassContainer) {
-                console.log('No existing container, creating new one...');
                 // Create the target class selection dropdown
                 const container = document.createElement('div');
                 container.id = 'skip-discovery-class-container';
@@ -1217,10 +1212,8 @@ $PropertyBag</ScriptBody>
                 `;
                 // Insert after the discovery-options div (parent of all cards)
                 const discoveryOptions = card.closest('.discovery-options');
-                console.log('Found discovery-options container:', discoveryOptions);
                 if (discoveryOptions) {
                     discoveryOptions.insertAdjacentElement('afterend', container);
-                    console.log('Dropdown inserted successfully');
                     
                     // Immediately disable the Next button when dropdown is created
                     const nextBtn = document.getElementById('next-discovery');
@@ -1268,26 +1261,18 @@ $PropertyBag</ScriptBody>
         }
         
         const nextBtn = document.getElementById('next-discovery');
-        console.log('Bottom of selectDiscoveryCard - discoveryType:', discoveryType);
-        console.log('Bottom of selectDiscoveryCard - nextBtn found:', !!nextBtn);
         if (nextBtn) {
             // For skip discovery, disable Next button until target class is selected
             if (discoveryType === 'skip') {
-                console.log('Setting up setTimeout to disable Next button for skip discovery');
                 // Use setTimeout to ensure the dropdown element is in the DOM
                 setTimeout(() => {
                     const targetClassSelect = document.getElementById('skip-target-class');
                     const btn = document.getElementById('next-discovery');
-                    console.log('setTimeout callback - targetClassSelect found:', !!targetClassSelect);
-                    console.log('setTimeout callback - targetClassSelect value:', targetClassSelect?.value);
                     if (btn) {
                         btn.disabled = !targetClassSelect || !targetClassSelect.value;
-                        console.log('Next button disabled state set to:', btn.disabled);
-                        console.log('Next button actual disabled attribute:', btn.getAttribute('disabled'));
                     }
                 }, 10);
             } else {
-                console.log('Not skip discovery, enabling Next button');
                 nextBtn.disabled = false;
             }
         }
@@ -2369,13 +2354,6 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
         this.saveConfigurationData();
         
         const config = this.mpData.configurations[componentType] || {};
-        
-        // Debug logging for process-monitor
-        if (baseMonitorType === 'process-monitor') {
-            console.log('Process Monitor Config Debug:');
-            console.log('componentType:', componentType);
-            console.log('config:', config);
-        }
         
         // Get target class from discovery configuration if not in current component
         const discoveryType = this.mpData.selectedComponents.discovery;
