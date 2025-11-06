@@ -1,0 +1,45 @@
+===============================================
+   SCOM MP Creator - Offline Installation
+===============================================
+
+FOR WINDOWS USERS:
+------------------
+
+QUICKEST WAY TO RUN:
+1. Double-click "start-server.bat"
+2. Open browser to: http://localhost:8080
+
+OR EVEN SIMPLER:
+1. Double-click "index.html"
+2. Click "Get Started"
+
+WHAT YOU NEED:
+- Windows 7 or later
+- Any modern browser (Chrome, Edge, Firefox)
+- Python (optional, for best performance)
+
+FILES INCLUDED:
+- index.html         (Landing page - double-click to start)
+- creator.html       (Main application)
+- mp-creator.js      (Application code)
+- mp-creator.css     (Styles)
+- styles.css         (Styles)
+- script.js          (Scripts)
+- start-server.bat   (Quick launcher for Windows)
+- Start-Server.ps1   (PowerShell launcher)
+
+DETAILED INSTRUCTIONS:
+See README_WINDOWS.md for complete guide
+
+TROUBLESHOOTING:
+- If .bat file doesn't work: Right-click index.html → Open With → Chrome/Edge
+- No Python? No problem! Just open the HTML files directly
+- All processing happens in your browser - completely offline safe
+
+NEED HELP?
+GitHub: https://github.com/osalzberg/scom-mp-creator
+
+===============================================
+Built by Oren Salzberg
+With assistance from Ilai Cohen and Yuval Canning
+===============================================
