@@ -1186,7 +1186,7 @@ $PropertyBag</ScriptBody>
         this.mpData.selectedComponents.discovery = discoveryType;
         
         // Show target class selection if skip discovery is selected
-        const skipClassContainer = document.getElementById('skip-discovery-class-container');
+        let skipClassContainer = document.getElementById('skip-discovery-class-container');
         if (discoveryType === 'skip') {
             if (!skipClassContainer) {
                 // Create the target class selection dropdown
@@ -1210,18 +1210,25 @@ $PropertyBag</ScriptBody>
                         <small style="color: #666; margin-top: 5px; display: block;">Select the class that your monitors/rules will target</small>
                     </div>
                 `;
-                card.parentElement.insertAdjacentElement('afterend', container);
+                // Insert after the discovery-grid div (parent of all cards)
+                const discoveryGrid = card.closest('.discovery-grid');
+                if (discoveryGrid) {
+                    discoveryGrid.insertAdjacentElement('afterend', container);
+                }
                 
                 // Add change event listener
                 document.getElementById('skip-target-class').addEventListener('change', (e) => {
                     this.mpData.configurations.skip = this.mpData.configurations.skip || {};
                     this.mpData.configurations.skip.targetClass = e.target.value;
                 });
+            } else {
+                // Container already exists, just make sure it's visible
+                skipClassContainer.style.display = 'block';
             }
         } else {
-            // Remove the container if switching away from skip
+            // Hide the container if switching away from skip
             if (skipClassContainer) {
-                skipClassContainer.remove();
+                skipClassContainer.style.display = 'none';
             }
         }
         
