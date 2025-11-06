@@ -1229,6 +1229,12 @@ $PropertyBag</ScriptBody>
                 document.getElementById('skip-target-class').addEventListener('change', (e) => {
                     this.mpData.configurations.skip = this.mpData.configurations.skip || {};
                     this.mpData.configurations.skip.targetClass = e.target.value;
+                    
+                    // Enable the Next button when a class is selected
+                    const nextBtn = document.getElementById('next-discovery');
+                    if (nextBtn) {
+                        nextBtn.disabled = !e.target.value;
+                    }
                 });
             } else {
                 // Container already exists, just make sure it's visible
@@ -1243,7 +1249,13 @@ $PropertyBag</ScriptBody>
         
         const nextBtn = document.getElementById('next-discovery');
         if (nextBtn) {
-            nextBtn.disabled = false;
+            // For skip discovery, disable Next button until target class is selected
+            if (discoveryType === 'skip') {
+                const targetClassSelect = document.getElementById('skip-target-class');
+                nextBtn.disabled = !targetClassSelect || !targetClassSelect.value;
+            } else {
+                nextBtn.disabled = false;
+            }
         }
     }
 
@@ -1557,7 +1569,23 @@ $PropertyBag</ScriptBody>
         }
         
         if (this.currentStep === 2) {
-            return this.mpData.selectedComponents.discovery !== null;
+            const discoveryType = this.mpData.selectedComponents.discovery;
+            
+            // Check if a discovery method is selected
+            if (!discoveryType) {
+                return false;
+            }
+            
+            // If skip discovery is selected, validate that a target class is chosen
+            if (discoveryType === 'skip') {
+                const targetClassSelect = document.getElementById('skip-target-class');
+                if (!targetClassSelect || !targetClassSelect.value) {
+                    alert('Please select a target class for your monitors when skipping discovery.');
+                    return false;
+                }
+            }
+            
+            return true;
         }
         
         return true;
