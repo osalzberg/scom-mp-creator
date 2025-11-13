@@ -1393,32 +1393,34 @@ $PropertyBag</ScriptBody>
                 }
                 buttonContainer.innerHTML = ''; // Clear existing buttons
                 
-                // Add "Add Another" button
-                const addBtn = document.createElement('button');
-                addBtn.className = 'btn-add-another';
-                addBtn.onclick = (e) => {
+                // Get current count
+                const count = this.mpData.selectedComponents.monitors.filter(m => m.type === componentType).length;
+                
+                // Create counter display
+                const counterDisplay = document.createElement('div');
+                counterDisplay.className = 'instance-counter';
+                counterDisplay.innerHTML = `
+                    <button class="counter-btn counter-minus" title="Remove instance"><i class="fas fa-minus"></i></button>
+                    <span class="counter-value">${count}</span>
+                    <button class="counter-btn counter-plus" title="Add instance"><i class="fas fa-plus"></i></button>
+                `;
+                
+                // Add event listeners for counter buttons
+                counterDisplay.querySelector('.counter-minus').onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (count > 1) {
+                        this.removeMonitorFromCard(componentType);
+                    }
+                };
+                
+                counterDisplay.querySelector('.counter-plus').onclick = (e) => {
                     e.preventDefault();
                     e.stopPropagation();
                     this.addAnotherMonitorInstance(componentType);
                 };
-                buttonContainer.appendChild(addBtn);
                 
-                // Add "Remove Instance" button if there are multiple instances
-                const count = this.mpData.selectedComponents.monitors.filter(m => m.type === componentType).length;
-                if (count > 1) {
-                    const removeBtn = document.createElement('button');
-                    removeBtn.className = 'btn-remove-monitor';
-                    removeBtn.onclick = (e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        this.removeMonitorFromCard(componentType);
-                    };
-                    removeBtn.innerHTML = `<i class="fas fa-minus"></i> Remove Instance`;
-                    buttonContainer.appendChild(removeBtn);
-                }
-                
-                // Update "Add Another" button text with count
-                addBtn.innerHTML = `<i class="fas fa-plus"></i> Add Another <span class="instance-count">${count}</span>`;
+                buttonContainer.appendChild(counterDisplay);
             } else {
                 // For other categories, keep existing behavior
                 if (!this.mpData.selectedComponents[category].includes(componentType)) {
@@ -1494,12 +1496,19 @@ $PropertyBag</ScriptBody>
             const lastInstance = instances[instances.length - 1];
             this.removeMonitorInstance(lastInstance.instanceId);
             
-            // Update the card buttons
+            // Update the counter display
             const card = document.querySelector(`.component-card[data-component="${componentType}"]`);
             if (card) {
                 const count = this.mpData.selectedComponents.monitors.filter(m => m.type === componentType).length;
-                // Trigger a re-render of the buttons by calling handleComponentSelection
-                this.handleComponentSelection(card.querySelector('input[type="checkbox"]'));
+                const counterValue = card.querySelector('.counter-value');
+                if (counterValue) {
+                    counterValue.textContent = count;
+                }
+            }
+            
+            // If we're on step 6, regenerate the configuration forms
+            if (this.currentStep === 6) {
+                this.generateConfigurationForms();
             }
         } else if (instances.length === 1) {
             // If this is the last instance, uncheck the card
@@ -1528,13 +1537,13 @@ $PropertyBag</ScriptBody>
         
         this.mpData.selectedComponents.monitors.push(instance);
         
-        // Update the button count
+        // Update the counter display
         const card = document.querySelector(`.component-card[data-component="${componentType}"]`);
         if (card) {
-            const addBtn = card.querySelector('.btn-add-another');
-            if (addBtn) {
-                const count = this.mpData.selectedComponents.monitors.filter(m => m.type === componentType).length;
-                addBtn.innerHTML = `<i class="fas fa-plus"></i> Add Another <span class="instance-count">${count}</span>`;
+            const count = this.mpData.selectedComponents.monitors.filter(m => m.type === componentType).length;
+            const counterValue = card.querySelector('.counter-value');
+            if (counterValue) {
+                counterValue.textContent = count;
             }
         }
         
