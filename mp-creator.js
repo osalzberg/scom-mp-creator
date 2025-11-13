@@ -621,17 +621,6 @@ Computer: {1}</Description>
                     { id: 'matchCount', label: 'Match Count (consecutive failures)', type: 'number', required: true, value: '2' }
                 ]
             },
-            'file-age-monitor': {
-                name: 'File Age Monitor',
-                template: 'Monitor.TimedScript.PowerShell.FileAge.mpx',
-                fields: [
-                    { id: 'intervalSeconds', label: 'Check Interval (seconds)', type: 'number', required: true, value: '300' },
-                    { id: 'folderPath', label: 'Folder Path', type: 'text', required: true, placeholder: 'C:\\Logs' },
-                    { id: 'fileExtensionFilter', label: 'File Extension Filter', type: 'text', required: true, placeholder: '*.log,*.txt' },
-                    { id: 'fileAgeThresholdMinutes', label: 'File Age Threshold (minutes)', type: 'number', required: true, value: '60' },
-                    { id: 'fileCountThreshold', label: 'File Count Threshold', type: 'number', required: true, value: '1' }
-                ]
-            },
             'file-size-monitor': {
                 name: 'File Size Monitor',
                 template: 'Monitor.TimedScript.PowerShell.FileSize.mpx',
