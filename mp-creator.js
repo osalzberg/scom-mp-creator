@@ -2454,7 +2454,7 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
             '##Protocol##': config.protocol || 'TCP',
             '##Timeout##': config.timeout || '10',
             '##FolderPath##': config.folderPath || config.folderpath || 'C:\\Logs',
-            '##FileExtensionFilter##': config.fileExtensionFilter || config.fileextensionfilter || '*.log',
+            '##FileExtensionFilter##': config.fileExtensionFilter || config.fileextensionfilter || config.fileNameFilter || config.filenamefilter || '*.log',
             '##FileNameFilter##': config.fileNameFilter || config.filenamefilter || '*.log',
             '##FileAgeThresholdMinutes##': config.fileAgeThresholdMinutes || config.fileagethresholdminutes || '60',
             '##FileSizeThresholdKB##': config.fileSizeThresholdKB || config.filesizethresholdkb || '1024',
