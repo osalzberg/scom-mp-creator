@@ -612,17 +612,6 @@ Computer: {1}</Description>
                     { id: 'matchCount', label: 'Match Count (breaches before alert)', type: 'number', required: true, value: '2' }
                 ]
             },
-            'process-performance-monitor': {
-                name: 'Process Performance Monitor',
-                template: 'Monitor.Process.Performance.ConsecSamples.TwoState.mpx',
-                fields: [
-                    { id: 'processName', label: 'Process Name', type: 'text', required: true, placeholder: 'w3wp' },
-                    { id: 'counterName', label: 'Counter Name', type: 'text', required: true, placeholder: 'Working Set' },
-                    { id: 'frequencySeconds', label: 'Check Interval (seconds)', type: 'number', required: true, value: '300' },
-                    { id: 'threshold', label: 'Threshold', type: 'number', required: true, placeholder: '100000000' },
-                    { id: 'samples', label: 'Consecutive Samples', type: 'number', required: true, value: '3' }
-                ]
-            },
             'port-monitor': {
                 name: 'Port Check Monitor',
                 template: 'Monitor.PortCheck.mpx',
