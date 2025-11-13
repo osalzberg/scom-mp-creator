@@ -2276,6 +2276,19 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
       </Reference>`
         ];
 
+        // Add SyntheticTransactions reference if Port Check Monitor is selected
+        const hasPortMonitor = this.mpData.selectedComponents.monitors?.some(
+            monitor => monitor.type === 'port-monitor'
+        );
+        
+        if (hasPortMonitor) {
+            refs.push(`      <Reference Alias="MSSL">
+        <ID>Microsoft.SystemCenter.SyntheticTransactions.Library</ID>
+        <Version>7.5.8501.0</Version>
+        <PublicKeyToken>31bf3856ad364e35</PublicKeyToken>
+      </Reference>`);
+        }
+
         // Add PowerShell Monitoring reference if 3-state monitor is selected
         const has3StateMonitor = this.mpData.selectedComponents.monitors?.some(
             monitor => monitor.type === 'powershell-script-monitor-3state'
