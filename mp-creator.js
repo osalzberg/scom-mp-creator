@@ -1769,12 +1769,12 @@ $PropertyBag</ScriptBody>
                     panel.className = 'config-panel';
                     panel.dataset.instanceId = instanceId;
                     panel.innerHTML = `
-                        <h3>
+                        <h3 style="display: flex; align-items: center; gap: 12px;">
                             <div class="config-panel-icon">
                                 <i class="fas fa-heartbeat"></i>
                             </div>
-                            Configure ${fragment.name}${totalOfType > 1 ? ` (Instance ${instanceNumber})` : ''}
-                            ${totalOfType > 1 ? `<button class="btn-remove-instance" data-instance-id="${instanceId}" style="margin-left: auto; padding: 4px 12px; background: #dc3545; border: none; color: white; border-radius: 4px; cursor: pointer; font-size: 0.9em;"><i class="fas fa-trash"></i> Remove</button>` : ''}
+                            <span>Configure ${fragment.name}${totalOfType > 1 ? ` (Instance ${instanceNumber})` : ''}</span>
+                            ${totalOfType > 1 ? `<button class="btn-remove-instance" data-instance-id="${instanceId}"><i class="fas fa-trash"></i> Remove</button>` : ''}
                         </h3>
                         <div class="config-grid" id="config-${instanceId}">
                             ${this.generateConfigFields(instanceId, fragment.fields)}
