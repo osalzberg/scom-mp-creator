@@ -1384,21 +1384,40 @@ $PropertyBag</ScriptBody>
                 
                 this.mpData.selectedComponents[category].push(instance);
                 
-                // Add or update "Add Another" button
-                let addBtn = card.querySelector('.btn-add-another');
-                if (!addBtn) {
-                    addBtn = document.createElement('button');
-                    addBtn.className = 'btn-add-another';
-                    addBtn.onclick = (e) => {
+                // Create or get button container
+                let buttonContainer = card.querySelector('.btn-container');
+                if (!buttonContainer) {
+                    buttonContainer = document.createElement('div');
+                    buttonContainer.className = 'btn-container';
+                    card.appendChild(buttonContainer);
+                }
+                buttonContainer.innerHTML = ''; // Clear existing buttons
+                
+                // Add "Add Another" button
+                const addBtn = document.createElement('button');
+                addBtn.className = 'btn-add-another';
+                addBtn.onclick = (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.addAnotherMonitorInstance(componentType);
+                };
+                buttonContainer.appendChild(addBtn);
+                
+                // Add "Remove Instance" button if there are multiple instances
+                const count = this.mpData.selectedComponents.monitors.filter(m => m.type === componentType).length;
+                if (count > 1) {
+                    const removeBtn = document.createElement('button');
+                    removeBtn.className = 'btn-remove-monitor';
+                    removeBtn.onclick = (e) => {
                         e.preventDefault();
                         e.stopPropagation();
-                        this.addAnotherMonitorInstance(componentType);
+                        this.removeMonitorFromCard(componentType);
                     };
-                    card.appendChild(addBtn);
+                    removeBtn.innerHTML = `<i class="fas fa-minus"></i> Remove Instance`;
+                    buttonContainer.appendChild(removeBtn);
                 }
                 
-                // Update button text with count
-                const count = this.mpData.selectedComponents.monitors.filter(m => m.type === componentType).length;
+                // Update "Add Another" button text with count
                 addBtn.innerHTML = `<i class="fas fa-plus"></i> Add Another <span class="instance-count">${count}</span>`;
             } else {
                 // For other categories, keep existing behavior
@@ -1464,6 +1483,35 @@ $PropertyBag</ScriptBody>
         
         // Regenerate the configuration forms
         this.generateConfigurationForms();
+    }
+
+    removeMonitorFromCard(componentType) {
+        // Remove the last instance of this monitor type from the card
+        const instances = this.mpData.selectedComponents.monitors.filter(m => m.type === componentType);
+        
+        if (instances.length > 1) {
+            // Remove the last instance
+            const lastInstance = instances[instances.length - 1];
+            this.removeMonitorInstance(lastInstance.instanceId);
+            
+            // Update the card buttons
+            const card = document.querySelector(`.component-card[data-component="${componentType}"]`);
+            if (card) {
+                const count = this.mpData.selectedComponents.monitors.filter(m => m.type === componentType).length;
+                // Trigger a re-render of the buttons by calling handleComponentSelection
+                this.handleComponentSelection(card.querySelector('input[type="checkbox"]'));
+            }
+        } else if (instances.length === 1) {
+            // If this is the last instance, uncheck the card
+            const card = document.querySelector(`.component-card[data-component="${componentType}"]`);
+            if (card) {
+                const checkbox = card.querySelector('input[type="checkbox"]');
+                if (checkbox) {
+                    checkbox.checked = false;
+                    checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+                }
+            }
+        }
     }
 
     addAnotherMonitorInstance(componentType) {
