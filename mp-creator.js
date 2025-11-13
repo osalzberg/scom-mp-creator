@@ -643,15 +643,6 @@ Computer: {1}</Description>
                     { id: 'comparisonType', label: 'Comparison Type', type: 'select', options: ['Greater Than', 'Less Than'], value: 'Greater Than' }
                 ]
             },
-            'folder-last-write-monitor': {
-                name: 'Folder Last Write Time Monitor',
-                template: 'Monitor.TimedScript.PowerShell.FolderLastWriteTimeOlderThanThreshold.mpx',
-                fields: [
-                    { id: 'intervalSeconds', label: 'Check Interval (seconds)', type: 'number', required: true, value: '300' },
-                    { id: 'folderPath', label: 'Folder Path', type: 'text', required: true, placeholder: 'C:\\Logs' },
-                    { id: 'thresholdMinutes', label: 'Threshold (minutes)', type: 'number', required: true, value: '60' }
-                ]
-            },
             'unc-path-freespace-monitor': {
                 name: 'UNC Path Free Space Monitor',
                 template: 'Monitor.TimedScript.PowerShell.UNCPathFreeSpace.mpx',
