@@ -1400,16 +1400,18 @@ $PropertyBag</ScriptBody>
                 const counterDisplay = document.createElement('div');
                 counterDisplay.className = 'instance-counter';
                 counterDisplay.innerHTML = `
-                    <button class="counter-btn counter-minus" title="Remove instance"><i class="fas fa-minus"></i></button>
+                    <button class="counter-btn counter-minus" title="Remove instance (add another instance)"><i class="fas fa-minus"></i></button>
                     <span class="counter-value">${count}</span>
-                    <button class="counter-btn counter-plus" title="Add instance"><i class="fas fa-plus"></i></button>
+                    <button class="counter-btn counter-plus" title="Add instance (add another instance)"><i class="fas fa-plus"></i></button>
+                    <span class="counter-label">Add Another Instance</span>
                 `;
                 
                 // Add event listeners for counter buttons
                 counterDisplay.querySelector('.counter-minus').onclick = (e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    if (count > 1) {
+                    const currentCount = this.mpData.selectedComponents.monitors.filter(m => m.type === componentType).length;
+                    if (currentCount > 1) {
                         this.removeMonitorFromCard(componentType);
                     }
                 };
