@@ -421,18 +421,6 @@ $momapi.LogScriptEvent($ScriptName,$EventID,0,"\`n Script Completed. \`n Script 
                     { id: 'samples', label: 'Consecutive Samples', type: 'number', required: true, value: '3' }
                 ]
             },
-            'performance-monitor-multi-instance': {
-                name: 'Performance Monitor (Multi-Instance)',
-                template: 'Monitor.Performance.MultiInstance.ConsecSamples.TwoState.mpx',
-                fields: [
-                    { id: 'objectName', label: 'Performance Object', type: 'text', required: true, placeholder: 'Process' },
-                    { id: 'counterName', label: 'Counter Name', type: 'text', required: true, placeholder: 'Working Set' },
-                    { id: 'instanceName', label: 'Instance Filter', type: 'text', required: false, placeholder: '*' },
-                    { id: 'frequencySeconds', label: 'Check Interval (seconds)', type: 'number', required: true, value: '300' },
-                    { id: 'threshold', label: 'Threshold', type: 'number', required: true, placeholder: '100000000' },
-                    { id: 'samples', label: 'Consecutive Samples', type: 'number', required: true, value: '3' }
-                ]
-            },
             'process-monitor': {
                 name: 'Process Monitor',
                 template: `<ManagementPackFragment SchemaVersion="2.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
@@ -642,21 +630,6 @@ Computer: {1}</Description>
                     { id: 'portNumber', label: 'Port Number', type: 'number', required: true, placeholder: '80' }
                 ]
             },
-            'registry-key-monitor': {
-                name: 'Registry Key Exists Monitor',
-                template: 'Monitor.RegistryKey.Exists.mpx',
-                fields: [
-                    { id: 'regKeyPath', label: 'Registry Key Path', type: 'text', required: true, placeholder: 'SOFTWARE\\MyCompany\\MyApplication' }
-                ]
-            },
-            'registry-value-monitor': {
-                name: 'Registry Value Exists Monitor',
-                template: 'Monitor.RegistryValue.Exists.mpx',
-                fields: [
-                    { id: 'regKeyPath', label: 'Registry Key Path', type: 'text', required: true, placeholder: 'SOFTWARE\\MyCompany\\MyApplication' },
-                    { id: 'valueName', label: 'Value Name', type: 'text', required: true, placeholder: 'Version' }
-                ]
-            },
             'file-age-monitor': {
                 name: 'File Age Monitor',
                 template: 'Monitor.TimedScript.PowerShell.FileAge.mpx',
@@ -707,17 +680,6 @@ Computer: {1}</Description>
                     { id: 'uncPath', label: 'UNC Path', type: 'text', required: true, placeholder: '\\\\server\\share\\folder' },
                     { id: 'warningThresholdPercent', label: 'Warning Threshold (%)', type: 'number', required: true, value: '20' },
                     { id: 'criticalThresholdPercent', label: 'Critical Threshold (%)', type: 'number', required: true, value: '10' }
-                ]
-            },
-            'sql-query-monitor': {
-                name: 'SQL Query Monitor',
-                template: 'Monitor.TimedScript.PowerShell.SQLQuery.mpx',
-                fields: [
-                    { id: 'intervalSeconds', label: 'Check Interval (seconds)', type: 'number', required: true, value: '300' },
-                    { id: 'sqlServer', label: 'SQL Server', type: 'text', required: true, placeholder: 'server.domain.com' },
-                    { id: 'sqlDBName', label: 'Database Name', type: 'text', required: true, placeholder: 'MyDatabase' },
-                    { id: 'sqlQuery', label: 'SQL Query', type: 'textarea', required: true, placeholder: 'SELECT COUNT(*) FROM MyTable WHERE Status = "Error"' },
-                    { id: 'rowCountThreshold', label: 'Row Count Threshold', type: 'number', required: true, value: '1' }
                 ]
             },
             'text-file-parser-monitor': {
@@ -956,25 +918,6 @@ $momapi.LogScriptEvent($ScriptName,$EventID,0,"\`n Script Completed. \`n Script 
                     { id: 'scriptBody', label: 'PowerShell Script', type: 'textarea', required: true, placeholder: 'param($Param1, $Param2)\n# Your script here' },
                     { id: 'param1', label: 'Parameter 1', type: 'text', required: false, placeholder: 'Value for $Param1' },
                     { id: 'param2', label: 'Parameter 2', type: 'text', required: false, placeholder: 'Value for $Param2' }
-                ]
-            },
-            'vbscript-monitor': {
-                name: 'VBScript Monitor',
-                template: 'Monitor.TimedScript.VBScript.mpx',
-                fields: [
-                    { id: 'intervalSeconds', label: 'Check Interval (seconds)', type: 'number', required: true, value: '300' },
-                    { id: 'scriptBody', label: 'VBScript', type: 'textarea', required: true, placeholder: 'Enter your VBScript monitoring code here...' }
-                ]
-            },
-            'snmp-monitor': {
-                name: 'SNMP OID Monitor',
-                template: 'Monitor.SNMP.Poll.OIDValue.Integer.Performance.mpx',
-                fields: [
-                    { id: 'oid', label: 'SNMP OID', type: 'text', required: true, placeholder: '1.3.6.1.2.1.1.3.0' },
-                    { id: 'community', label: 'SNMP Community', type: 'text', required: true, value: 'public' },
-                    { id: 'port', label: 'SNMP Port', type: 'number', required: true, value: '161' },
-                    { id: 'threshold', label: 'Threshold', type: 'number', required: true, placeholder: '90' },
-                    { id: 'intervalSeconds', label: 'Check Interval (seconds)', type: 'number', required: true, value: '300' }
                 ]
             },
             'powershell-script-monitor-3state': {
