@@ -2346,6 +2346,24 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
         // Ensure configuration data is saved before processing
         this.saveConfigurationData();
         
+        // Check if template is a filename (external template) and load it synchronously
+        if (typeof template === 'string' && template.endsWith('.mpx')) {
+            try {
+                const xhr = new XMLHttpRequest();
+                xhr.open('GET', `FragmentLibrary-master 2/${template}`, false); // synchronous load
+                xhr.send();
+                if (xhr.status === 200) {
+                    template = xhr.responseText;
+                } else {
+                    console.error(`Failed to load template file: ${template} (HTTP ${xhr.status})`);
+                    template = '<!-- Failed to load template -->';
+                }
+            } catch (error) {
+                console.error(`Error loading template file ${template}:`, error);
+                template = '<!-- Error loading template -->';
+            }
+        }
+        
         const config = this.mpData.configurations[componentType] || {};
         
         // Get target class from discovery configuration if not in current component
