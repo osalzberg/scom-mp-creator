@@ -214,14 +214,14 @@ This fragment depends on references:
       <UnitMonitor ID="##CompanyID##.##AppName##.##UniqueID##.PortCheck.Monitor" Accessibility="Public" Enabled="true" Target="##ClassID##" ParentMonitorID="Health!System.Health.AvailabilityState" Remotable="true" Priority="Normal" TypeID="##CompanyID##.##AppName##.##UniqueID##.PortCheck.MonitorType" ConfirmDelivery="false">
         <Category>AvailabilityHealth</Category>
         <AlertSettings AlertMessage="##CompanyID##.##AppName##.##UniqueID##.PortCheck.Monitor.AlertMessage">
-          <AlertOnState>Warning</AlertOnState>  <!-- Warning or Error should match OperationalStates below  -->
+          <AlertOnState>Error</AlertOnState>  <!-- Warning or Error should match OperationalStates below  -->
           <AutoResolve>true</AutoResolve>
           <AlertPriority>Normal</AlertPriority>
           <AlertSeverity>Error</AlertSeverity>  <!-- Common options for AlertSeverity are MatchMonitorHealth, Information, Warning, Error -->
         </AlertSettings>
         <OperationalStates>
           <OperationalState ID="PortResponding" MonitorTypeStateID="PortResponding" HealthState="Success" />
-          <OperationalState ID="PortFailed" MonitorTypeStateID="PortFailed" HealthState="Warning" />
+          <OperationalState ID="PortFailed" MonitorTypeStateID="PortFailed" HealthState="Error" />
         </OperationalStates>
         <Configuration>
           <IntervalSeconds>120</IntervalSeconds>
