@@ -616,7 +616,9 @@ Computer: {1}</Description>
                 name: 'Port Check Monitor',
                 template: 'Monitor.PortCheck.mpx',
                 fields: [
-                    { id: 'portNumber', label: 'Port Number', type: 'number', required: true, placeholder: '80' }
+                    { id: 'portNumber', label: 'Port Number', type: 'number', required: true, placeholder: '80' },
+                    { id: 'intervalSeconds', label: 'Check Interval (seconds)', type: 'number', required: true, value: '120' },
+                    { id: 'matchCount', label: 'Match Count (consecutive failures)', type: 'number', required: true, value: '2' }
                 ]
             },
             'file-age-monitor': {
