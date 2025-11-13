@@ -2382,15 +2382,22 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
         
         // Check if this is a monitor instance (baseMonitorType is passed)
         if (baseMonitorType) {
+            // Extract instance number from componentType (e.g., "port-monitor-instance-2" -> "2")
+            let instanceSuffix = '';
+            const instanceMatch = componentType.match(/-instance-(\d+)$/);
+            if (instanceMatch) {
+                instanceSuffix = `.Instance${instanceMatch[1]}`;
+            }
+            
             // For monitors, check if they have their own uniqueId first
             if (config.uniqueId || config.uniqueid) {
-                effectiveUniqueId = config.uniqueId || config.uniqueid;
+                effectiveUniqueId = (config.uniqueId || config.uniqueid) + instanceSuffix;
             } else if (this.mpData.selectedComponents.discovery && this.mpData.selectedComponents.discovery !== 'skip') {
                 // If no uniqueId in monitor config, use discovery's uniqueId
-                effectiveUniqueId = discoveryConfig.uniqueId || 'Application';
+                effectiveUniqueId = (discoveryConfig.uniqueId || 'Application') + instanceSuffix;
             } else {
                 // Default fallback
-                effectiveUniqueId = 'Application';
+                effectiveUniqueId = 'Application' + instanceSuffix;
             }
             
             // Determine target class for monitor
