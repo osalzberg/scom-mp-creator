@@ -2344,7 +2344,9 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
         if (typeof template === 'string' && template.endsWith('.mpx')) {
             try {
                 const xhr = new XMLHttpRequest();
-                xhr.open('GET', `FragmentLibrary-master 2/${template}`, false); // synchronous load
+                // Add cache-busting timestamp to prevent browser from using cached template
+                const cacheBuster = `?_=${Date.now()}`;
+                xhr.open('GET', `FragmentLibrary-master 2/${template}${cacheBuster}`, false); // synchronous load
                 xhr.send();
                 if (xhr.status === 200) {
                     template = xhr.responseText;
