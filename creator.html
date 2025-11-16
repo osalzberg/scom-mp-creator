@@ -339,56 +339,135 @@
                     <h2>Select Rules</h2>
                     <p class="step-description">Choose data collection and alerting rules. Rules collect performance data or generate alerts based on events and conditions.</p>
                     
+                    <h3 style="margin-top: 20px; margin-bottom: 15px; color: #3b82f6;"><i class="fas fa-exclamation-triangle"></i> Event Log Alert Rules</h3>
                     <div class="components-grid">
-                        <div class="component-card" data-component="performance-collection">
+                        <div class="component-card" data-component="eventlog-alert-eventid">
                             <div class="component-icon">
-                                <i class="fas fa-chart-line"></i>
+                                <i class="fas fa-file-alt"></i>
                             </div>
-                            <h3>Performance Collection</h3>
-                            <p>Collect performance counter data for reporting and analysis</p>
+                            <h3>Event ID</h3>
+                            <p>Alert on specific Event ID</p>
                             <label class="component-checkbox">
-                                <input type="checkbox" value="performance-collection">
+                                <input type="checkbox" value="eventlog-alert-eventid">
                                 <span class="checkmark"></span>
-                                Add Performance Collection
+                                Add Event Alert
                             </label>
                         </div>
 
-                        <div class="component-card" data-component="event-alert">
+                        <div class="component-card" data-component="eventlog-alert-eventid-description">
                             <div class="component-icon">
-                                <i class="fas fa-exclamation-triangle"></i>
+                                <i class="fas fa-file-alt"></i>
                             </div>
-                            <h3>Event Log Alert</h3>
-                            <p>Generate alerts when specific events occur in Windows Event Logs</p>
+                            <h3>Event ID + Description</h3>
+                            <p>Alert on Event ID with description filter</p>
                             <label class="component-checkbox">
-                                <input type="checkbox" value="event-alert">
+                                <input type="checkbox" value="eventlog-alert-eventid-description">
                                 <span class="checkmark"></span>
-                                Add Event Alert Rule
+                                Add Event Alert
                             </label>
                         </div>
 
-                        <div class="component-card" data-component="script-alert">
+                        <div class="component-card" data-component="eventlog-alert-eventid-source">
                             <div class="component-icon">
-                                <i class="fas fa-bell"></i>
+                                <i class="fas fa-file-alt"></i>
                             </div>
-                            <h3>Script Alert</h3>
-                            <p>Custom PowerShell script that generates alerts based on conditions</p>
+                            <h3>Event ID + Source</h3>
+                            <p>Alert on Event ID with source filter</p>
                             <label class="component-checkbox">
-                                <input type="checkbox" value="script-alert">
+                                <input type="checkbox" value="eventlog-alert-eventid-source">
                                 <span class="checkmark"></span>
-                                Add Script Alert Rule
+                                Add Event Alert
                             </label>
                         </div>
 
-                        <div class="component-card" data-component="snmp-alert">
+                        <div class="component-card" data-component="eventlog-alert-eventid-source-description">
                             <div class="component-icon">
-                                <i class="fas fa-satellite"></i>
+                                <i class="fas fa-file-alt"></i>
                             </div>
-                            <h3>SNMP Alert</h3>
-                            <p>Generate alerts based on SNMP trap reception</p>
+                            <h3>Event ID + Source + Description</h3>
+                            <p>Alert on Event ID with source and description</p>
                             <label class="component-checkbox">
-                                <input type="checkbox" value="snmp-alert">
+                                <input type="checkbox" value="eventlog-alert-eventid-source-description">
                                 <span class="checkmark"></span>
-                                Add SNMP Alert Rule
+                                Add Event Alert
+                            </label>
+                        </div>
+
+                        <div class="component-card" data-component="eventlog-alert-eventid-expression">
+                            <div class="component-icon">
+                                <i class="fas fa-code"></i>
+                            </div>
+                            <h3>Event ID Expression</h3>
+                            <p>Alert on multiple Event IDs (expression)</p>
+                            <label class="component-checkbox">
+                                <input type="checkbox" value="eventlog-alert-eventid-expression">
+                                <span class="checkmark"></span>
+                                Add Event Alert
+                            </label>
+                        </div>
+
+                        <div class="component-card" data-component="eventlog-alert-eventid-expression-description">
+                            <div class="component-icon">
+                                <i class="fas fa-code"></i>
+                            </div>
+                            <h3>Event ID Expression + Description</h3>
+                            <p>Multiple Event IDs with description filter</p>
+                            <label class="component-checkbox">
+                                <input type="checkbox" value="eventlog-alert-eventid-expression-description">
+                                <span class="checkmark"></span>
+                                Add Event Alert
+                            </label>
+                        </div>
+
+                        <div class="component-card" data-component="eventlog-alert-eventid-expression-source">
+                            <div class="component-icon">
+                                <i class="fas fa-code"></i>
+                            </div>
+                            <h3>Event ID Expression + Source</h3>
+                            <p>Multiple Event IDs with source filter</p>
+                            <label class="component-checkbox">
+                                <input type="checkbox" value="eventlog-alert-eventid-expression-source">
+                                <span class="checkmark"></span>
+                                Add Event Alert
+                            </label>
+                        </div>
+
+                        <div class="component-card" data-component="eventlog-alert-eventid-expression-source-description">
+                            <div class="component-icon">
+                                <i class="fas fa-code"></i>
+                            </div>
+                            <h3>Event ID Expression + Source + Description</h3>
+                            <p>Multiple Event IDs with source and description</p>
+                            <label class="component-checkbox">
+                                <input type="checkbox" value="eventlog-alert-eventid-expression-source-description">
+                                <span class="checkmark"></span>
+                                Add Event Alert
+                            </label>
+                        </div>
+
+                        <div class="component-card" data-component="eventlog-alert-repeated">
+                            <div class="component-icon">
+                                <i class="fas fa-redo"></i>
+                            </div>
+                            <h3>Repeated Event</h3>
+                            <p>Alert when event repeats N times in time window</p>
+                            <label class="component-checkbox">
+                                <input type="checkbox" value="eventlog-alert-repeated">
+                                <span class="checkmark"></span>
+                                Add Event Alert
+                            </label>
+                        </div>
+
+                        <div class="component-card" data-component="eventlog-alert-correlated">
+                            <div class="component-icon">
+                                <i class="fas fa-link"></i>
+                            </div>
+                            <h3>Two Correlated Events</h3>
+                            <p>Alert when two events occur within time window</p>
+                            <label class="component-checkbox">
+                                <input type="checkbox" value="eventlog-alert-correlated">
+                                <span class="checkmark"></span>
+                                Add Event Alert
                             </label>
                         </div>
                     </div>

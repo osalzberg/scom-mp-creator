@@ -1010,6 +1010,109 @@ $PropertyBag</ScriptBody>
                       help: 'IMPORTANT: Your script MUST use $PropertyBag.AddValue("State", "Ok|Warning|Bad"). Do NOT change the variable name "State" or "PropertyBag" - they are required for the monitor to work correctly. The script wrapper automatically creates $PropertyBag and returns it.' 
                     }
                 ]
+            },
+            // RULES
+            'eventlog-alert-eventid': {
+                name: 'Event Log Alert - Event ID',
+                template: 'Rule.AlertGenerating.EventLog.EventIdEquals.mpx',
+                fields: [
+                    { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'EventAlert' },
+                    { id: 'logName', label: 'Log Name', type: 'text', required: true, placeholder: 'Application', value: 'Application' },
+                    { id: 'eventId', label: 'Event ID', type: 'number', required: true, placeholder: '1234' }
+                ]
+            },
+            'eventlog-alert-eventid-description': {
+                name: 'Event Log Alert - Event ID with Description',
+                template: 'Rule.AlertGenerating.EventLog.EventIdEquals.DescriptionContains.mpx',
+                fields: [
+                    { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'EventAlert' },
+                    { id: 'logName', label: 'Log Name', type: 'text', required: true, placeholder: 'Application', value: 'Application' },
+                    { id: 'eventId', label: 'Event ID', type: 'number', required: true, placeholder: '1234' },
+                    { id: 'description', label: 'Description Contains', type: 'text', required: true, placeholder: 'error' }
+                ]
+            },
+            'eventlog-alert-eventid-source': {
+                name: 'Event Log Alert - Event ID with Source',
+                template: 'Rule.AlertGenerating.EventLog.EventIdEquals.SourceEquals.mpx',
+                fields: [
+                    { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'EventAlert' },
+                    { id: 'logName', label: 'Log Name', type: 'text', required: true, placeholder: 'Application', value: 'Application' },
+                    { id: 'eventId', label: 'Event ID', type: 'number', required: true, placeholder: '1234' },
+                    { id: 'eventSource', label: 'Event Source', type: 'text', required: true, placeholder: 'MyApplication' }
+                ]
+            },
+            'eventlog-alert-eventid-source-description': {
+                name: 'Event Log Alert - Event ID with Source and Description',
+                template: 'Rule.AlertGenerating.EventLog.EventIdEquals.SourceEquals.DescriptionContains.mpx',
+                fields: [
+                    { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'EventAlert' },
+                    { id: 'logName', label: 'Log Name', type: 'text', required: true, placeholder: 'Application', value: 'Application' },
+                    { id: 'eventId', label: 'Event ID', type: 'number', required: true, placeholder: '1234' },
+                    { id: 'eventSource', label: 'Event Source', type: 'text', required: true, placeholder: 'MyApplication' },
+                    { id: 'description', label: 'Description Contains', type: 'text', required: true, placeholder: 'error' }
+                ]
+            },
+            'eventlog-alert-eventid-expression': {
+                name: 'Event Log Alert - Event ID Expression',
+                template: 'Rule.AlertGenerating.EventLog.EventIdExpression.mpx',
+                fields: [
+                    { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'EventAlert' },
+                    { id: 'logName', label: 'Log Name', type: 'text', required: true, placeholder: 'Application', value: 'Application' },
+                    { id: 'eventId', label: 'Event ID Expression', type: 'text', required: true, placeholder: '1000,1001,1002' }
+                ]
+            },
+            'eventlog-alert-eventid-expression-description': {
+                name: 'Event Log Alert - Event ID Expression with Description',
+                template: 'Rule.AlertGenerating.EventLog.EventIdExpression.DescriptionContains.mpx',
+                fields: [
+                    { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'EventAlert' },
+                    { id: 'logName', label: 'Log Name', type: 'text', required: true, placeholder: 'Application', value: 'Application' },
+                    { id: 'eventId', label: 'Event ID Expression', type: 'text', required: true, placeholder: '1000,1001,1002' },
+                    { id: 'description', label: 'Description Contains', type: 'text', required: true, placeholder: 'error' }
+                ]
+            },
+            'eventlog-alert-eventid-expression-source': {
+                name: 'Event Log Alert - Event ID Expression with Source',
+                template: 'Rule.AlertGenerating.EventLog.EventIdExpression.SourceEquals.mpx',
+                fields: [
+                    { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'EventAlert' },
+                    { id: 'logName', label: 'Log Name', type: 'text', required: true, placeholder: 'Application', value: 'Application' },
+                    { id: 'eventId', label: 'Event ID Expression', type: 'text', required: true, placeholder: '1000,1001,1002' },
+                    { id: 'eventSource', label: 'Event Source', type: 'text', required: true, placeholder: 'MyApplication' }
+                ]
+            },
+            'eventlog-alert-eventid-expression-source-description': {
+                name: 'Event Log Alert - Event ID Expression with Source and Description',
+                template: 'Rule.AlertGenerating.EventLog.EventIdExpression.SourceEquals.DescriptionContains.mpx',
+                fields: [
+                    { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'EventAlert' },
+                    { id: 'logName', label: 'Log Name', type: 'text', required: true, placeholder: 'Application', value: 'Application' },
+                    { id: 'eventId', label: 'Event ID Expression', type: 'text', required: true, placeholder: '1000,1001,1002' },
+                    { id: 'eventSource', label: 'Event Source', type: 'text', required: true, placeholder: 'MyApplication' },
+                    { id: 'description', label: 'Description Contains', type: 'text', required: true, placeholder: 'error' }
+                ]
+            },
+            'eventlog-alert-repeated': {
+                name: 'Event Log Alert - Repeated Event',
+                template: 'Rule.AlertGenerating.EventLog.RepeatedEvent.mpx',
+                fields: [
+                    { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'RepeatedEventAlert' },
+                    { id: 'logName', label: 'Log Name', type: 'text', required: true, placeholder: 'Application', value: 'Application' },
+                    { id: 'eventId', label: 'Event ID', type: 'number', required: true, placeholder: '1234' },
+                    { id: 'repeatCount', label: 'Repeat Count', type: 'number', required: true, value: '5', placeholder: '5' },
+                    { id: 'intervalSeconds', label: 'Time Window (seconds)', type: 'number', required: true, value: '300', placeholder: '300' }
+                ]
+            },
+            'eventlog-alert-correlated': {
+                name: 'Event Log Alert - Two Correlated Events',
+                template: 'Rule.AlertGenerating.EventLog.TwoCorrelatedEvents.mpx',
+                fields: [
+                    { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'CorrelatedEventAlert' },
+                    { id: 'logName', label: 'Log Name', type: 'text', required: true, placeholder: 'Application', value: 'Application' },
+                    { id: 'eventId1', label: 'First Event ID', type: 'number', required: true, placeholder: '1234' },
+                    { id: 'eventId2', label: 'Second Event ID', type: 'number', required: true, placeholder: '1235' },
+                    { id: 'intervalSeconds', label: 'Time Window (seconds)', type: 'number', required: true, value: '300', placeholder: '300' }
+                ]
             }
         };
     }
@@ -2498,7 +2601,12 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
             '##LogName##': config.logName || config.logname || 'Application',
             '##EventSource##': config.eventSource || config.eventsource || '',
             '##EventId##': config.eventId || config.eventid || '',
-            '##EventLevel##': config.eventLevel || config.eventlevel || 'Error'
+            '##EventID##': config.eventId || config.eventid || '',
+            '##EventLevel##': config.eventLevel || config.eventlevel || 'Error',
+            '##Description##': config.description || '',
+            '##RepeatCount##': config.repeatCount || config.repeatcount || '5',
+            '##EventId1##': config.eventId1 || config.eventid1 || '',
+            '##EventId2##': config.eventId2 || config.eventid2 || ''
         };
 
         // FAILSAFE: If intervalSeconds is not in config, try to read it directly from the DOM
