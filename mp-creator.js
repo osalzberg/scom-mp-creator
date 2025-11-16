@@ -1113,6 +1113,35 @@ $PropertyBag</ScriptBody>
                     { id: 'eventId2', label: 'Second Event ID', type: 'number', required: true, placeholder: '1235' },
                     { id: 'intervalSeconds', label: 'Time Window (seconds)', type: 'number', required: true, value: '300', placeholder: '300' }
                 ]
+            },
+            'performance-collection': {
+                name: 'Performance Collection Rule',
+                template: 'Rule.Performance.Collection.Perfmon.mpx',
+                fields: [
+                    { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'CPUUsage' },
+                    { id: 'objectName', label: 'Performance Object', type: 'text', required: true, placeholder: 'Processor', value: 'Processor' },
+                    { id: 'counterName', label: 'Counter Name', type: 'text', required: true, placeholder: '% Processor Time', value: '% Processor Time' },
+                    { id: 'instanceName', label: 'Instance Name', type: 'text', required: true, placeholder: '_Total', value: '_Total', help: 'Use "_Total" for aggregate or specific instance name' },
+                    { id: 'frequencySeconds', label: 'Collection Frequency (seconds)', type: 'number', required: true, value: '300', placeholder: '300', help: '300 seconds (5 minutes) is recommended' }
+                ]
+            },
+            'script-alert': {
+                name: 'Script Alert Rule (PowerShell)',
+                template: 'Rule.AlertGenerating.TimedScript.Powershell.WithParams.mpx',
+                fields: [
+                    { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'CustomScriptAlert' },
+                    { id: 'intervalSeconds', label: 'Run Every (seconds)', type: 'number', required: true, value: '300', placeholder: '300' },
+                    { id: 'scriptBody', label: 'PowerShell Script', type: 'textarea', required: true, 
+                      placeholder: '# Your custom PowerShell script here\n# Return $true to generate alert, $false otherwise\n$result = Test-Path "C:\\MyApp\\critical.txt"\nreturn $result',
+                      help: 'Script should return $true to generate an alert' }
+                ]
+            },
+            'snmp-alert': {
+                name: 'SNMP Trap Alert Rule',
+                template: 'Rule.AlertGenerating.SNMPTrap.AlertOnOID.mpx',
+                fields: [
+                    { id: 'oid', label: 'SNMP OID', type: 'text', required: true, placeholder: '1.3.6.1.4.1.9.9.41.2.0.1', help: 'The SNMP trap OID to monitor' }
+                ]
             }
         };
     }
