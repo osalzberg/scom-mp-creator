@@ -1012,82 +1012,42 @@ $PropertyBag</ScriptBody>
                 ]
             },
             // RULES
-            'eventlog-alert-eventid': {
-                name: 'Event Log Alert - Event ID',
-                template: 'Rule.AlertGenerating.EventLog.EventIdEquals.mpx',
-                fields: [
-                    { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'EventAlert' },
-                    { id: 'logName', label: 'Log Name', type: 'text', required: true, placeholder: 'Application', value: 'Application' },
-                    { id: 'eventId', label: 'Event ID', type: 'number', required: true, placeholder: '1234' }
-                ]
-            },
-            'eventlog-alert-eventid-description': {
-                name: 'Event Log Alert - Event ID with Description',
-                template: 'Rule.AlertGenerating.EventLog.EventIdEquals.DescriptionContains.mpx',
-                fields: [
-                    { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'EventAlert' },
-                    { id: 'logName', label: 'Log Name', type: 'text', required: true, placeholder: 'Application', value: 'Application' },
-                    { id: 'eventId', label: 'Event ID', type: 'number', required: true, placeholder: '1234' },
-                    { id: 'description', label: 'Description Contains', type: 'text', required: true, placeholder: 'error' }
-                ]
-            },
-            'eventlog-alert-eventid-source': {
-                name: 'Event Log Alert - Event ID with Source',
-                template: 'Rule.AlertGenerating.EventLog.EventIdEquals.SourceEquals.mpx',
-                fields: [
-                    { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'EventAlert' },
-                    { id: 'logName', label: 'Log Name', type: 'text', required: true, placeholder: 'Application', value: 'Application' },
-                    { id: 'eventId', label: 'Event ID', type: 'number', required: true, placeholder: '1234' },
-                    { id: 'eventSource', label: 'Event Source', type: 'text', required: true, placeholder: 'MyApplication' }
-                ]
-            },
-            'eventlog-alert-eventid-source-description': {
-                name: 'Event Log Alert - Event ID with Source and Description',
-                template: 'Rule.AlertGenerating.EventLog.EventIdEquals.SourceEquals.DescriptionContains.mpx',
-                fields: [
-                    { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'EventAlert' },
-                    { id: 'logName', label: 'Log Name', type: 'text', required: true, placeholder: 'Application', value: 'Application' },
-                    { id: 'eventId', label: 'Event ID', type: 'number', required: true, placeholder: '1234' },
-                    { id: 'eventSource', label: 'Event Source', type: 'text', required: true, placeholder: 'MyApplication' },
-                    { id: 'description', label: 'Description Contains', type: 'text', required: true, placeholder: 'error' }
-                ]
-            },
             'eventlog-alert-eventid-expression': {
-                name: 'Event Log Alert - Event ID Expression',
+                name: 'Event Log Alert - Event ID',
                 template: 'Rule.AlertGenerating.EventLog.EventIdExpression.mpx',
                 fields: [
                     { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'EventAlert' },
                     { id: 'logName', label: 'Log Name', type: 'text', required: true, placeholder: 'Application', value: 'Application' },
-                    { id: 'eventId', label: 'Event ID Expression', type: 'text', required: true, placeholder: '1000,1001,1002' }
+                    { id: 'eventId', label: 'Event ID(s)', type: 'text', required: true, placeholder: '1234 or 1000,1001,1002', help: 'Single Event ID or comma-separated list' }
                 ]
             },
             'eventlog-alert-eventid-expression-description': {
-                name: 'Event Log Alert - Event ID Expression with Description',
+                name: 'Event Log Alert - Event ID with Description',
                 template: 'Rule.AlertGenerating.EventLog.EventIdExpression.DescriptionContains.mpx',
                 fields: [
                     { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'EventAlert' },
                     { id: 'logName', label: 'Log Name', type: 'text', required: true, placeholder: 'Application', value: 'Application' },
-                    { id: 'eventId', label: 'Event ID Expression', type: 'text', required: true, placeholder: '1000,1001,1002' },
+                    { id: 'eventId', label: 'Event ID(s)', type: 'text', required: true, placeholder: '1234 or 1000,1001,1002', help: 'Single Event ID or comma-separated list' },
                     { id: 'description', label: 'Description Contains', type: 'text', required: true, placeholder: 'error' }
                 ]
             },
             'eventlog-alert-eventid-expression-source': {
-                name: 'Event Log Alert - Event ID Expression with Source',
+                name: 'Event Log Alert - Event ID with Source',
                 template: 'Rule.AlertGenerating.EventLog.EventIdExpression.SourceEquals.mpx',
                 fields: [
                     { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'EventAlert' },
                     { id: 'logName', label: 'Log Name', type: 'text', required: true, placeholder: 'Application', value: 'Application' },
-                    { id: 'eventId', label: 'Event ID Expression', type: 'text', required: true, placeholder: '1000,1001,1002' },
+                    { id: 'eventId', label: 'Event ID(s)', type: 'text', required: true, placeholder: '1234 or 1000,1001,1002', help: 'Single Event ID or comma-separated list' },
                     { id: 'eventSource', label: 'Event Source', type: 'text', required: true, placeholder: 'MyApplication' }
                 ]
             },
             'eventlog-alert-eventid-expression-source-description': {
-                name: 'Event Log Alert - Event ID Expression with Source and Description',
+                name: 'Event Log Alert - Event ID with Source and Description',
                 template: 'Rule.AlertGenerating.EventLog.EventIdExpression.SourceEquals.DescriptionContains.mpx',
                 fields: [
                     { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'EventAlert' },
                     { id: 'logName', label: 'Log Name', type: 'text', required: true, placeholder: 'Application', value: 'Application' },
-                    { id: 'eventId', label: 'Event ID Expression', type: 'text', required: true, placeholder: '1000,1001,1002' },
+                    { id: 'eventId', label: 'Event ID(s)', type: 'text', required: true, placeholder: '1234 or 1000,1001,1002', help: 'Single Event ID or comma-separated list' },
                     { id: 'eventSource', label: 'Event Source', type: 'text', required: true, placeholder: 'MyApplication' },
                     { id: 'description', label: 'Description Contains', type: 'text', required: true, placeholder: 'error' }
                 ]
