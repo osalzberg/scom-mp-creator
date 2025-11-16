@@ -658,9 +658,10 @@ Computer: {1}</Description>
                 template: 'Monitor.TimedScript.PowerShell.ParseTextFile.mpx',
                 fields: [
                     { id: 'intervalSeconds', label: 'Check Interval (seconds)', type: 'number', required: true, value: '300' },
+                    { id: 'timeoutSeconds', label: 'Timeout (seconds)', type: 'number', required: true, value: '120' },
                     { id: 'filePath', label: 'File Path', type: 'text', required: true, placeholder: 'C:\\Logs\\application.log' },
                     { id: 'searchString', label: 'Search String', type: 'text', required: true, placeholder: 'ERROR' },
-                    { id: 'matchThreshold', label: 'Match Threshold', type: 'number', required: true, value: '1' }
+                    { id: 'matchThreshold', label: 'Match Threshold (hours)', type: 'number', required: true, value: '1' }
                 ]
             },
             'powershell-script-monitor': {
@@ -2464,6 +2465,7 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
             '##LogFilePath##': config.filePath || config.filepath || 'C:\\Logs\\app.log',
             '##TextStringExpected##': config.searchString || config.searchstring || 'ERROR',
             '##ThresholdHours##': config.matchThreshold || config.matchthreshold || '1',
+            '##TimeoutSeconds##': config.timeoutSeconds || config.timeoutseconds || '120',
             '##Param1##': config.param1 || '',
             '##Param2##': config.param2 || '',
             '##ThresholdMinutes##': config.thresholdMinutes || config.thresholdminutes || '60',

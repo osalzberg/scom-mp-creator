@@ -338,12 +338,12 @@ $momapi.LogScriptEvent($ScriptName,$EventID,0,"`nScript Completed. `nRuntime: ($
           <OperationalState ID="BadCondition" MonitorTypeStateID="BadCondition" HealthState="Warning" />  <!-- HealthState = Warning or Error -->
         </OperationalStates>
         <Configuration>
-          <IntervalSeconds>3600</IntervalSeconds>
+          <IntervalSeconds>##IntervalSeconds##</IntervalSeconds>
 		  <SyncTime></SyncTime>
-		  <LogFilePath>C:\Windows\Temp\installation.log</LogFilePath>  
-		  <TextStringExpected>D:\program files\ManageSoft\Launcher\ndlaunch</TextStringExpected>
-		  <ThresholdHours>31</ThresholdHours>		  
-          <TimeoutSeconds>120</TimeoutSeconds>
+		  <LogFilePath>##LogFilePath##</LogFilePath>  
+		  <TextStringExpected>##TextStringExpected##</TextStringExpected>
+		  <ThresholdHours>##ThresholdHours##</ThresholdHours>		  
+          <TimeoutSeconds>##TimeoutSeconds##</TimeoutSeconds>
 		  <MatchCount>1</MatchCount>  <!-- This is the number of consecutive matches that must be met before the monitor will change state.  Also a good example of passing in Integer data. -->
         </Configuration>
       </UnitMonitor>
