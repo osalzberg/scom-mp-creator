@@ -2204,6 +2204,30 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
             });
         }
         
+        // Add rule fragments
+        console.log('DEBUG: Processing rules in generateMPXML');
+        console.log('DEBUG: selectedComponents.rules =', this.mpData.selectedComponents.rules);
+        if (this.mpData.selectedComponents.rules && this.mpData.selectedComponents.rules.length > 0) {
+            this.mpData.selectedComponents.rules.forEach(ruleType => {
+                console.log('DEBUG: Processing rule type:', ruleType);
+                const fragment = this.fragmentLibrary[ruleType];
+                console.log('DEBUG: Fragment found:', fragment);
+                if (fragment && fragment.template) {
+                    console.log('DEBUG: Processing template for rule:', ruleType);
+                    const processedFragment = this.processFragmentTemplate(ruleType, fragment.template);
+                    console.log('DEBUG: Processed fragment length:', processedFragment ? processedFragment.length : 0);
+                    if (processedFragment && processedFragment.trim().length > 0) {
+                        allFragments.push(processedFragment);
+                        console.log('DEBUG: Added rule fragment to allFragments');
+                    }
+                } else {
+                    console.error('No template found for rule:', ruleType);
+                }
+            });
+        } else {
+            console.log('DEBUG: No rules selected');
+        }
+        
         // Extract sections from fragments and combine them
         const { typeDefinitions, monitoring, presentation, languagePacks } = this.extractAndCombineSections(allFragments);
         
