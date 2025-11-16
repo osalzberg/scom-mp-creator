@@ -1485,7 +1485,6 @@ $PropertyBag</ScriptBody>
                 // For other categories, keep existing behavior
                 if (!this.mpData.selectedComponents[category].includes(componentType)) {
                     this.mpData.selectedComponents[category].push(componentType);
-                    console.log('DEBUG: Added', componentType, 'to category', category, '- Current array:', this.mpData.selectedComponents[category]);
                 }
             }
             
@@ -1511,7 +1510,6 @@ $PropertyBag</ScriptBody>
             
             card.classList.remove('selected');
         }
-        console.log('DEBUG: After handleComponentSelection - selectedComponents:', this.mpData.selectedComponents);
     }
 
     addAnotherMonitorInstance(componentType) {
@@ -1917,13 +1915,9 @@ $PropertyBag</ScriptBody>
         }
 
         // Generate rule configurations (when rules are implemented)
-        console.log('DEBUG: selectedComponents.rules =', this.mpData.selectedComponents.rules);
         if (this.mpData.selectedComponents.rules && this.mpData.selectedComponents.rules.length > 0) {
-            console.log('DEBUG: Found rules to configure:', this.mpData.selectedComponents.rules);
             this.mpData.selectedComponents.rules.forEach(ruleType => {
-                console.log('DEBUG: Processing rule type:', ruleType);
                 const fragment = this.fragmentLibrary[ruleType];
-                console.log('DEBUG: Fragment found:', fragment);
                 if (fragment) {
                     const panel = document.createElement('div');
                     panel.className = 'config-panel';
@@ -1940,13 +1934,10 @@ $PropertyBag</ScriptBody>
                     `;
                     
                     configContainer.appendChild(panel);
-                    console.log('DEBUG: Added config panel for rule:', ruleType);
                 } else {
-                    console.error('DEBUG: Fragment NOT found for rule type:', ruleType);
+                    console.error('Fragment NOT found for rule type:', ruleType);
                 }
             });
-        } else {
-            console.log('DEBUG: No rules selected or rules array is empty');
         }
 
         // Show message if no components are selected
@@ -2160,11 +2151,6 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
                     
                     // Save the value even if it's empty (might be intentional)
                     this.mpData.configurations[componentType][fieldName] = value;
-                    
-                    // Debug log for rules
-                    if (componentType.includes('performance-collection') || componentType.includes('script-alert') || componentType.includes('snmp-alert')) {
-                        console.log('Saving rule config:', componentType, fieldName, '=', value);
-                    }
                 }
             }
         });
@@ -2205,27 +2191,18 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
         }
         
         // Add rule fragments
-        console.log('DEBUG: Processing rules in generateMPXML');
-        console.log('DEBUG: selectedComponents.rules =', this.mpData.selectedComponents.rules);
         if (this.mpData.selectedComponents.rules && this.mpData.selectedComponents.rules.length > 0) {
             this.mpData.selectedComponents.rules.forEach(ruleType => {
-                console.log('DEBUG: Processing rule type:', ruleType);
                 const fragment = this.fragmentLibrary[ruleType];
-                console.log('DEBUG: Fragment found:', fragment);
                 if (fragment && fragment.template) {
-                    console.log('DEBUG: Processing template for rule:', ruleType);
                     const processedFragment = this.processFragmentTemplate(ruleType, fragment.template);
-                    console.log('DEBUG: Processed fragment length:', processedFragment ? processedFragment.length : 0);
                     if (processedFragment && processedFragment.trim().length > 0) {
                         allFragments.push(processedFragment);
-                        console.log('DEBUG: Added rule fragment to allFragments');
                     }
                 } else {
                     console.error('No template found for rule:', ruleType);
                 }
             });
-        } else {
-            console.log('DEBUG: No rules selected');
         }
         
         // Extract sections from fragments and combine them
@@ -2545,22 +2522,6 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
         
         const config = this.mpData.configurations[componentType] || {};
         
-        // Debug: Log configuration for text-file-parser monitors
-        if (componentType.includes('text-file-parser')) {
-            console.log('Text File Parser Config Debug:');
-            console.log('Component Type:', componentType);
-            console.log('Config Object:', config);
-            console.log('All Configurations:', this.mpData.configurations);
-        }
-        
-        // Debug: Log configuration for rules
-        if (componentType.includes('performance-collection') || componentType.includes('script-alert') || componentType.includes('snmp-alert')) {
-            console.log('Rule Config Debug:');
-            console.log('Component Type:', componentType);
-            console.log('Config Object:', config);
-            console.log('All Configurations:', this.mpData.configurations);
-        }
-        
         // Get target class from discovery configuration if not in current component
         const discoveryType = this.mpData.selectedComponents.discovery;
         const discoveryConfig = discoveryType ? this.mpData.configurations[discoveryType] || {} : {};
@@ -2857,31 +2818,18 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
     generateRulesSection() {
         const rules = [];
         
-        console.log('DEBUG: generateRulesSection called');
-        console.log('DEBUG: selectedComponents.rules =', this.mpData.selectedComponents.rules);
-        
         if (this.mpData.selectedComponents.rules && this.mpData.selectedComponents.rules.length > 0) {
             this.mpData.selectedComponents.rules.forEach(ruleType => {
-                console.log('DEBUG: Processing rule in generateRulesSection:', ruleType);
                 const fragment = this.fragmentLibrary[ruleType];
-                console.log('DEBUG: Fragment for rule:', fragment);
                 if (fragment && fragment.template) {
-                    console.log('DEBUG: Calling processFragmentTemplate for rule:', ruleType);
                     const processedRule = this.processFragmentTemplate(ruleType, fragment.template);
-                    console.log('DEBUG: Processed rule length:', processedRule ? processedRule.length : 0);
                     if (processedRule && processedRule.trim()) {
                         rules.push(processedRule);
-                        console.log('DEBUG: Added processed rule to array');
                     }
-                } else {
-                    console.log('DEBUG: No fragment or template found for rule:', ruleType);
                 }
             });
-        } else {
-            console.log('DEBUG: No rules selected or rules array is empty/undefined');
         }
         
-        console.log('DEBUG: Total rules generated:', rules.length);
         return rules.join('\n');
     }
 
