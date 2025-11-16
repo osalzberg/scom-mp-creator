@@ -2356,11 +2356,21 @@ ${rules.map(rule => '      ' + rule).join('\n')}
         
         combinedMonitoring = monitoringSections.join('\n');
         
-        // Generate StringResource elements for monitors with AlertMessage references
+        // Generate StringResource elements for monitors and rules with AlertMessage references
         let stringResources = [];
         monitors.forEach(monitorXml => {
             // Look for AlertMessage references in the monitor XML
             const alertMessageMatch = monitorXml.match(/AlertMessage="([^"]+)"/);
+            if (alertMessageMatch) {
+                const alertMessageId = alertMessageMatch[1];
+                stringResources.push(`      <StringResource ID="${alertMessageId}" />`);
+            }
+        });
+        
+        // Also check rules for AlertMessage references
+        rules.forEach(ruleXml => {
+            // Look for AlertMessageId references in the rule XML
+            const alertMessageMatch = ruleXml.match(/AlertMessageId[^>]*>\$MPElement\[Name="([^"]+)"\]\$</);
             if (alertMessageMatch) {
                 const alertMessageId = alertMessageMatch[1];
                 stringResources.push(`      <StringResource ID="${alertMessageId}" />`);
