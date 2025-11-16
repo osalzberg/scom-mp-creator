@@ -2833,18 +2833,31 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
     generateRulesSection() {
         const rules = [];
         
+        console.log('DEBUG: generateRulesSection called');
+        console.log('DEBUG: selectedComponents.rules =', this.mpData.selectedComponents.rules);
+        
         if (this.mpData.selectedComponents.rules && this.mpData.selectedComponents.rules.length > 0) {
             this.mpData.selectedComponents.rules.forEach(ruleType => {
+                console.log('DEBUG: Processing rule in generateRulesSection:', ruleType);
                 const fragment = this.fragmentLibrary[ruleType];
+                console.log('DEBUG: Fragment for rule:', fragment);
                 if (fragment && fragment.template) {
+                    console.log('DEBUG: Calling processFragmentTemplate for rule:', ruleType);
                     const processedRule = this.processFragmentTemplate(ruleType, fragment.template);
+                    console.log('DEBUG: Processed rule length:', processedRule ? processedRule.length : 0);
                     if (processedRule && processedRule.trim()) {
                         rules.push(processedRule);
+                        console.log('DEBUG: Added processed rule to array');
                     }
+                } else {
+                    console.log('DEBUG: No fragment or template found for rule:', ruleType);
                 }
             });
+        } else {
+            console.log('DEBUG: No rules selected or rules array is empty/undefined');
         }
         
+        console.log('DEBUG: Total rules generated:', rules.length);
         return rules.join('\n');
     }
 
