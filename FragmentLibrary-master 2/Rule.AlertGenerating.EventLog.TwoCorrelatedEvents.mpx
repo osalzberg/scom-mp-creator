@@ -104,7 +104,7 @@ This fragment depends on references:
               <Expression />
             </CorrelationExpression>			
 			<Count>1</Count> <!-- The number of EventID1 events that must be observed to begin the timer to look for the second event -->
-			<Interval>30</Interval> <!-- The time in seconds where the second event must appear after the first event -->
+			<Interval>##IntervalSeconds##</Interval> <!-- The time in seconds where the second event must appear after the first event -->
 			<Latency>0</Latency> <!-- The time in seconds to wait before outputting data after correlating -->
 			<CorrelationOrder>InSequence</CorrelationOrder> <!-- Options are InSequence/AnyOrder -->
 			<CorrelationItemPolicy>First</CorrelationItemPolicy>  <!-- Options are First/Last/ResetWindow on managing the time window for the first event -->

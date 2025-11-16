@@ -1068,9 +1068,12 @@ $PropertyBag</ScriptBody>
                 template: 'Rule.AlertGenerating.EventLog.TwoCorrelatedEvents.mpx',
                 fields: [
                     { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'CorrelatedEventAlert' },
-                    { id: 'logName', label: 'Log Name', type: 'text', required: true, placeholder: 'Application', value: 'Application' },
+                    { id: 'logName1', label: 'First Event Log Name', type: 'text', required: true, placeholder: 'Application', value: 'Application' },
                     { id: 'eventId1', label: 'First Event ID', type: 'number', required: true, placeholder: '1234' },
+                    { id: 'eventSource1', label: 'First Event Source', type: 'text', required: true, placeholder: 'MyApplication' },
+                    { id: 'logName2', label: 'Second Event Log Name', type: 'text', required: true, placeholder: 'Application', value: 'Application' },
                     { id: 'eventId2', label: 'Second Event ID', type: 'number', required: true, placeholder: '1235' },
+                    { id: 'eventSource2', label: 'Second Event Source', type: 'text', required: true, placeholder: 'MyApplication' },
                     { id: 'intervalSeconds', label: 'Time Window (seconds)', type: 'number', required: true, value: '300', placeholder: '300' }
                 ]
             },
@@ -2622,7 +2625,12 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
             '##Description##': config.description || '',
             '##RepeatCount##': config.repeatCount || config.repeatcount || '5',
             '##EventId1##': config.eventId1 || config.eventid1 || '',
-            '##EventId2##': config.eventId2 || config.eventid2 || ''
+            '##EventId2##': config.eventId2 || config.eventid2 || '',
+            '##LogName1##': config.logName1 || config.logname1 || 'Application',
+            '##LogName2##': config.logName2 || config.logname2 || 'Application',
+            '##EventSource1##': config.eventSource1 || config.eventsource1 || '',
+            '##EventSource2##': config.eventSource2 || config.eventsource2 || '',
+            '##IntervalSeconds##': config.intervalSeconds || config.intervalseconds || '300'
         };
 
         // FAILSAFE: If intervalSeconds is not in config, try to read it directly from the DOM
