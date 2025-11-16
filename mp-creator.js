@@ -2626,6 +2626,8 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
             '##RepeatCount##': config.repeatCount || config.repeatcount || '5',
             '##EventId1##': config.eventId1 || config.eventid1 || '',
             '##EventId2##': config.eventId2 || config.eventid2 || '',
+            '##EventID1##': config.eventId1 || config.eventid1 || '',
+            '##EventID2##': config.eventId2 || config.eventid2 || '',
             '##LogName1##': config.logName1 || config.logname1 || 'Application',
             '##LogName2##': config.logName2 || config.logname2 || 'Application',
             '##EventSource1##': config.eventSource1 || config.eventsource1 || '',
