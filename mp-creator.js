@@ -2160,6 +2160,11 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
                     
                     // Save the value even if it's empty (might be intentional)
                     this.mpData.configurations[componentType][fieldName] = value;
+                    
+                    // Debug log for rules
+                    if (componentType.includes('performance-collection') || componentType.includes('script-alert') || componentType.includes('snmp-alert')) {
+                        console.log('Saving rule config:', componentType, fieldName, '=', value);
+                    }
                 }
             }
         });
@@ -2519,6 +2524,14 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
         // Debug: Log configuration for text-file-parser monitors
         if (componentType.includes('text-file-parser')) {
             console.log('Text File Parser Config Debug:');
+            console.log('Component Type:', componentType);
+            console.log('Config Object:', config);
+            console.log('All Configurations:', this.mpData.configurations);
+        }
+        
+        // Debug: Log configuration for rules
+        if (componentType.includes('performance-collection') || componentType.includes('script-alert') || componentType.includes('snmp-alert')) {
+            console.log('Rule Config Debug:');
             console.log('Component Type:', componentType);
             console.log('Config Object:', config);
             console.log('All Configurations:', this.mpData.configurations);
