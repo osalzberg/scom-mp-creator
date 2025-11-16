@@ -2818,8 +2818,21 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
     }
 
     generateRulesSection() {
-        // Implementation for rules section
-        return '    <!-- Rules not yet implemented -->';
+        const rules = [];
+        
+        if (this.mpData.selectedComponents.rules && this.mpData.selectedComponents.rules.length > 0) {
+            this.mpData.selectedComponents.rules.forEach(ruleType => {
+                const fragment = this.fragmentLibrary[ruleType];
+                if (fragment && fragment.template) {
+                    const processedRule = this.processFragmentTemplate(ruleType, fragment.template);
+                    if (processedRule && processedRule.trim()) {
+                        rules.push(processedRule);
+                    }
+                }
+            });
+        }
+        
+        return rules.join('\n');
     }
 
     generatePresentationSection() {
