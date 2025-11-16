@@ -2460,6 +2460,10 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
             '##FilePath##': config.filePath || config.filepath || 'C:\\Logs\\app.log',
             '##SearchString##': config.searchString || config.searchstring || 'ERROR',
             '##MatchThreshold##': config.matchThreshold || config.matchthreshold || '1',
+            // Text File Parser Monitor specific placeholders
+            '##LogFilePath##': config.filePath || config.filepath || 'C:\\Logs\\app.log',
+            '##TextStringExpected##': config.searchString || config.searchstring || 'ERROR',
+            '##ThresholdHours##': config.matchThreshold || config.matchthreshold || '1',
             '##Param1##': config.param1 || '',
             '##Param2##': config.param2 || '',
             '##ThresholdMinutes##': config.thresholdMinutes || config.thresholdminutes || '60',
