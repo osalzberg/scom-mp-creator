@@ -665,7 +665,7 @@ Computer: {1}</Description>
                 ]
             },
             'powershell-script-monitor': {
-                name: 'PowerShell Script Monitor',
+                name: 'PowerShell Script Monitor (2 States)',
                 template: `<ManagementPackFragment SchemaVersion="2.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <TypeDefinitions>
     <ModuleTypes>
