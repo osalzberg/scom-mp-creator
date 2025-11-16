@@ -1456,6 +1456,7 @@ $PropertyBag</ScriptBody>
                 // For other categories, keep existing behavior
                 if (!this.mpData.selectedComponents[category].includes(componentType)) {
                     this.mpData.selectedComponents[category].push(componentType);
+                    console.log('DEBUG: Added', componentType, 'to category', category, '- Current array:', this.mpData.selectedComponents[category]);
                 }
             }
             
@@ -1481,6 +1482,7 @@ $PropertyBag</ScriptBody>
             
             card.classList.remove('selected');
         }
+        console.log('DEBUG: After handleComponentSelection - selectedComponents:', this.mpData.selectedComponents);
     }
 
     addAnotherMonitorInstance(componentType) {
@@ -1886,9 +1888,13 @@ $PropertyBag</ScriptBody>
         }
 
         // Generate rule configurations (when rules are implemented)
+        console.log('DEBUG: selectedComponents.rules =', this.mpData.selectedComponents.rules);
         if (this.mpData.selectedComponents.rules && this.mpData.selectedComponents.rules.length > 0) {
+            console.log('DEBUG: Found rules to configure:', this.mpData.selectedComponents.rules);
             this.mpData.selectedComponents.rules.forEach(ruleType => {
+                console.log('DEBUG: Processing rule type:', ruleType);
                 const fragment = this.fragmentLibrary[ruleType];
+                console.log('DEBUG: Fragment found:', fragment);
                 if (fragment) {
                     const panel = document.createElement('div');
                     panel.className = 'config-panel';
@@ -1905,8 +1911,13 @@ $PropertyBag</ScriptBody>
                     `;
                     
                     configContainer.appendChild(panel);
+                    console.log('DEBUG: Added config panel for rule:', ruleType);
+                } else {
+                    console.error('DEBUG: Fragment NOT found for rule type:', ruleType);
                 }
             });
+        } else {
+            console.log('DEBUG: No rules selected or rules array is empty');
         }
 
         // Show message if no components are selected
