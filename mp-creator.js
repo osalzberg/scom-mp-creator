@@ -2564,9 +2564,17 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
                 monitorTargetClass = skipConfig.targetClass || targetClass;
             }
         } else {
-            // For discoveries and other components
+            // For discoveries, rules and other components
             effectiveUniqueId = config.uniqueId || config.uniqueid || 'Application';
-            monitorTargetClass = `${companyId}.${appName}.${effectiveUniqueId}.Class`;
+            
+            // For rules, use the target class directly (not a custom class)
+            // Rules should target Windows classes or the discovery class if one exists
+            if (this.mpData.selectedComponents.discovery && this.mpData.selectedComponents.discovery !== 'skip') {
+                monitorTargetClass = `${companyId}.${appName}.${discoveryConfig.uniqueId || effectiveUniqueId}.Class`;
+            } else {
+                // No discovery - use the skip target class or default Windows class
+                monitorTargetClass = skipConfig.targetClass || targetClass;
+            }
         }
         
         // Create replacement map
