@@ -340,3 +340,24 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+// Toggle section function for collapsible sections
+function toggleSection(sectionId) {
+    const section = document.getElementById(sectionId);
+    const icon = document.getElementById(sectionId + '-icon');
+    
+    if (section && icon) {
+        if (section.style.display === 'none' || section.style.display === '') {
+            section.style.display = 'grid';
+            icon.classList.remove('fa-chevron-right');
+            icon.classList.add('fa-chevron-down');
+        } else {
+            section.style.display = 'none';
+            icon.classList.remove('fa-chevron-down');
+            icon.classList.add('fa-chevron-right');
+        }
+    }
+}
+
+// Make toggleSection available globally
+window.toggleSection = toggleSection;
