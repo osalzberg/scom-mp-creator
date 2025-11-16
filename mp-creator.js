@@ -1054,6 +1054,17 @@ $PropertyBag</ScriptBody>
         });
 
         document.addEventListener('input', (e) => {
+            // Auto-capitalize uniqueId fields
+            if (e.target.id && e.target.id.endsWith('-uniqueId')) {
+                const cursorPosition = e.target.selectionStart;
+                const originalLength = e.target.value.length;
+                e.target.value = e.target.value.toUpperCase();
+                // Restore cursor position after capitalization
+                const newLength = e.target.value.length;
+                const newPosition = cursorPosition + (newLength - originalLength);
+                e.target.setSelectionRange(newPosition, newPosition);
+            }
+            
             // Auto-save configuration data when any input in config section is typed in
             if (e.target.closest('#component-configs')) {
                 this.saveConfigurationData();
