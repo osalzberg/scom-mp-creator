@@ -115,14 +115,12 @@
     color: white;
 }
 
-/* Indicate clickable vs non-clickable steps */
-.progress-step.completed,
-.progress-step.active {
+/* All steps are clickable for navigation */
+.progress-step {
     cursor: pointer;
 }
 
 .progress-step:not(.active):not(.completed) {
-    cursor: not-allowed;
     opacity: 0.6;
 }
 
