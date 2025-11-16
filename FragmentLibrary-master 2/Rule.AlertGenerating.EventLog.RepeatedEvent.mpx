@@ -79,7 +79,7 @@ This fragment depends on references:
         <WriteActions>
           <WriteAction ID="WA" TypeID="Health!System.Health.GenerateAlert">
             <Priority>1</Priority>  <!-- 0=Low, 1=Medium, 2=High -->
-            <Severity>1</Severity>  <!-- 0=Information, 1=Warning, 2=Critical -->
+            <Severity>2</Severity>  <!-- 0=Information, 1=Warning, 2=Critical -->
             <AlertMessageId>$MPElement[Name="##CompanyID##.##AppName##.RepeatedEvent.##EventID##.Alert.Rule.AlertMessage"]$</AlertMessageId>
             <AlertParameters>
               <AlertParameter1>$Data/Count$</AlertParameter1>
