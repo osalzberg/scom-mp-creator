@@ -2360,6 +2360,14 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
         
         const config = this.mpData.configurations[componentType] || {};
         
+        // Debug: Log configuration for text-file-parser monitors
+        if (componentType.includes('text-file-parser')) {
+            console.log('Text File Parser Config Debug:');
+            console.log('Component Type:', componentType);
+            console.log('Config Object:', config);
+            console.log('All Configurations:', this.mpData.configurations);
+        }
+        
         // Get target class from discovery configuration if not in current component
         const discoveryType = this.mpData.selectedComponents.discovery;
         const discoveryConfig = discoveryType ? this.mpData.configurations[discoveryType] || {} : {};
