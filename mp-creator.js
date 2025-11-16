@@ -1054,8 +1054,8 @@ $PropertyBag</ScriptBody>
         });
 
         document.addEventListener('input', (e) => {
-            // Auto-capitalize uniqueId fields
-            if (e.target.id && e.target.id.endsWith('-uniqueId')) {
+            // Auto-capitalize Company ID and uniqueId fields
+            if (e.target.id === 'company-id' || (e.target.id && e.target.id.endsWith('-uniqueId'))) {
                 const cursorPosition = e.target.selectionStart;
                 const originalLength = e.target.value.length;
                 e.target.value = e.target.value.toUpperCase();
