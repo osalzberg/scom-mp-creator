@@ -2021,7 +2021,6 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
       <Version>${version || '1.0.0.0'}</Version>
     </Identity>
     <Name>${mpId}</Name>
-    ${description ? `<Description>${description}</Description>` : ''}
     <References>
       <Reference Alias="System">
         <ID>System.Library</ID>
@@ -2034,6 +2033,7 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
         <PublicKeyToken>31bf3856ad364e35</PublicKeyToken>
       </Reference>
     </References>
+    ${description ? `<Description>${description}</Description>` : ''}
   </Manifest>
   
   <!-- 
@@ -2174,6 +2174,10 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
         // Build references
         let references = this.generateReferences();
         
+        // Check if any rules are selected - if so, skip Description
+        const hasAnyRule = this.mpData.selectedComponents.rules && this.mpData.selectedComponents.rules.length > 0;
+        const includeDescription = !hasAnyRule && description;
+        
         return `<?xml version="1.0" encoding="utf-8"?>
 <ManagementPack ContentReadable="true" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <Manifest>
@@ -2182,10 +2186,10 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
       <Version>${version}</Version>
     </Identity>
     <Name>${mpId}</Name>
-    ${description ? `<Description>${description}</Description>` : ''}
     <References>
 ${references}
     </References>
+    ${includeDescription ? `<Description>${description}</Description>` : ''}
   </Manifest>
   ${typeDefinitions ? `<TypeDefinitions>\n${typeDefinitions}\n  </TypeDefinitions>` : ''}
   <Monitoring>
@@ -2413,6 +2417,27 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
         <ID>Community.PowerShellMonitoring</ID>
         <Version>1.1.1.2</Version>
         <PublicKeyToken>3aa540324b898d3c</PublicKeyToken>
+      </Reference>`);
+        }
+
+        // Add Performance Collection references if performance collection rule is selected
+        const hasPerfCollectionRule = this.mpData.selectedComponents.rules?.includes('performance-collection');
+        
+        if (hasPerfCollectionRule) {
+            refs.push(`      <Reference Alias="SC">
+        <ID>Microsoft.SystemCenter.Library</ID>
+        <Version>7.0.8437.0</Version>
+        <PublicKeyToken>31bf3856ad364e35</PublicKeyToken>
+      </Reference>`);
+            refs.push(`      <Reference Alias="Perf">
+        <ID>System.Performance.Library</ID>
+        <Version>7.0.8437.0</Version>
+        <PublicKeyToken>31bf3856ad364e35</PublicKeyToken>
+      </Reference>`);
+            refs.push(`      <Reference Alias="MSDL">
+        <ID>Microsoft.SystemCenter.DataWarehouse.Library</ID>
+        <Version>7.0.8437.0</Version>
+        <PublicKeyToken>31bf3856ad364e35</PublicKeyToken>
       </Reference>`);
         }
 
