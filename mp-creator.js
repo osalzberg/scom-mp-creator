@@ -1614,6 +1614,17 @@ $PropertyBag</ScriptBody>
             }
         }
         
+        // Validate Event ID fields for event log alert rules
+        if (field.id && (field.id.includes('-eventId') || field.id.includes('-eventid'))) {
+            if (value) {
+                const eventId = parseInt(value, 10);
+                if (isNaN(eventId) || eventId < 1 || eventId > 1000) {
+                    this.showFieldError(formGroup, 'Event ID must be between 1 and 1000');
+                    return false;
+                }
+            }
+        }
+        
         if (value) {
             formGroup.classList.add('success');
         }
