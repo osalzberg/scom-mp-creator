@@ -71,7 +71,7 @@ This fragment depends on references:
               </WithinTimeSchedule>
             </TimeControl>
             <CountingCondition>
-              <Count>10</Count>  <!-- how many events to look for in given time period -->
+              <Count>##RepeatCount##</Count>  <!-- how many events to look for in given time period -->
               <CountMode>OnNewItemTestOutputRestart_OnTimerSlideByOne</CountMode>
             </CountingCondition>
           </Consolidator>
