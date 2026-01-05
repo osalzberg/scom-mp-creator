@@ -358,12 +358,11 @@
                     </div>
 
                     <div class="component-section">
-                        <h3 style="margin-top: 20px; margin-bottom: 15px; color: #3b82f6; cursor: pointer; display: flex; align-items: center; gap: 10px;" onclick="toggleSection('eventlog-rules')">
-                            <i class="fas fa-chevron-right" id="eventlog-rules-icon"></i>
+                        <h3 style="margin-top: 20px; margin-bottom: 15px; color: #3b82f6; display: flex; align-items: center; gap: 10px;">
                             <i class="fas fa-exclamation-triangle"></i> 
-                            Event Log Alert Rules (Click to expand)
+                            Event Log Alert Rules
                         </h3>
-                        <div class="components-grid" id="eventlog-rules" style="display: none;">
+                        <div class="components-grid" id="eventlog-rules">
                             <div class="component-card" data-component="eventlog-alert-eventid-expression">
                                 <div class="component-icon">
                                     <i class="fas fa-file-alt"></i>
@@ -484,40 +483,9 @@
                 <!-- Step 5: Other Components -->
                 <div class="form-step" id="step-5">
                     <h2>Additional Components</h2>
-                    <p class="step-description">Add tasks and views to complete your Management Pack functionality.</p>
+                    <p class="step-description">Add views to complete your Management Pack functionality.</p>
                     
                     <div class="other-components">
-                        <div class="component-section">
-                            <h3><i class="fas fa-tasks"></i> Tasks</h3>
-                            <div class="components-grid">
-                                <div class="component-card" data-component="powershell-task">
-                                    <div class="component-icon">
-                                        <i class="fas fa-terminal"></i>
-                                    </div>
-                                    <h3>PowerShell Task</h3>
-                                    <p>Custom PowerShell actions for operators</p>
-                                    <label class="component-checkbox">
-                                        <input type="checkbox" value="powershell-task">
-                                        <span class="checkmark"></span>
-                                        Add PowerShell Task
-                                    </label>
-                                </div>
-
-                                <div class="component-card" data-component="recovery-task">
-                                    <div class="component-icon">
-                                        <i class="fas fa-redo"></i>
-                                    </div>
-                                    <h3>Recovery Action</h3>
-                                    <p>Automatic recovery actions for monitors</p>
-                                    <label class="component-checkbox">
-                                        <input type="checkbox" value="recovery-task">
-                                        <span class="checkmark"></span>
-                                        Add Recovery Action
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
                         <div class="component-section">
                             <h3><i class="fas fa-chart-bar"></i> Views</h3>
                             <div class="components-grid">
