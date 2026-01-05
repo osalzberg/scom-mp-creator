@@ -28,6 +28,33 @@ class MPCreator {
         }, 100);
     }
 
+    // Security: XML encoding for user inputs to prevent XML injection
+    escapeXml(unsafe) {
+        if (typeof unsafe !== 'string') return unsafe;
+        return unsafe
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&apos;');
+    }
+
+    // Security: HTML encoding for display to prevent XSS
+    escapeHtml(unsafe) {
+        if (typeof unsafe !== 'string') return unsafe;
+        const div = document.createElement('div');
+        div.textContent = unsafe;
+        return div.innerHTML;
+    }
+
+    // Security: Sanitize user input - remove potentially dangerous characters
+    sanitizeInput(input) {
+        if (typeof input !== 'string') return input;
+        // Allow alphanumeric, spaces, hyphens, underscores, dots, and common punctuation
+        // Remove any control characters or special sequences
+        return input.replace(/[<>'"&\x00-\x1F\x7F]/g, '');
+    }
+
     loadFragmentLibrary() {
         this.fragmentLibrary = {
             'registry-key': {
@@ -2587,87 +2614,88 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
         }
         
         // Create replacement map
+        // Security: Apply XML encoding to all user-provided values
         const replacements = {
-            '##CompanyID##': companyId,
-            '##AppName##': appName,
-            '##UniqueID##': effectiveUniqueId,
-            '##ClassID##': monitorTargetClass,
-            '##RegKeyPath##': config.regKeyPath || config.regkeypath || 'SOFTWARE\\MyCompany\\MyApplication',
-            '##TargetClass##': targetClass,
-            '##ServiceName##': config.serviceName || config.servicename || 'YourService',
-            '##WMIQuery##': config.wmiQuery || config.wmiquery || 'SELECT * FROM Win32_Service WHERE Name = "YourService"',
-            '##Namespace##': config.namespace || 'root\\cimv2',
-            '##ComputerNameList##': config.computerNameList || config.computernamelist || 'SERVER1,SERVER2',
+            '##CompanyID##': this.escapeXml(companyId),
+            '##AppName##': this.escapeXml(appName),
+            '##UniqueID##': this.escapeXml(effectiveUniqueId),
+            '##ClassID##': this.escapeXml(monitorTargetClass),
+            '##RegKeyPath##': this.escapeXml(config.regKeyPath || config.regkeypath || 'SOFTWARE\\MyCompany\\MyApplication'),
+            '##TargetClass##': this.escapeXml(targetClass),
+            '##ServiceName##': this.escapeXml(config.serviceName || config.servicename || 'YourService'),
+            '##WMIQuery##': this.escapeXml(config.wmiQuery || config.wmiquery || 'SELECT * FROM Win32_Service WHERE Name = "YourService"'),
+            '##Namespace##': this.escapeXml(config.namespace || 'root\\cimv2'),
+            '##ComputerNameList##': this.escapeXml(config.computerNameList || config.computernamelist || 'SERVER1,SERVER2'),
             '##ScriptType##': config.scriptType || config.scripttype || 'PowerShell',
-            '##ScriptBody##': config.scriptBody || config.scriptbody || '# Enter your script here',
-            '##SCRIPT_BODY##': config.scriptBody || config.scriptbody || ' $status=if(Get-Process -Name notepad -ErrorAction SilentlyContinue) { 1 } else {0} \n\nif($status -eq 0) {\n  $PropertyBag.AddValue("State","Bad")\n}\nelseif($status -eq "Warning") {\n  $PropertyBag.AddValue("State","Warning")\n}\nelse\n{\n  $PropertyBag.AddValue("State","Ok")\n}',
-            '##ValueName##': config.valueName || config.valuename || '',
-            '##ExpectedValue##': config.expectedValue || config.expectedvalue || '',
+            '##ScriptBody##': this.escapeXml(config.scriptBody || config.scriptbody || '# Enter your script here'),
+            '##SCRIPT_BODY##': this.escapeXml(config.scriptBody || config.scriptbody || ' $status=if(Get-Process -Name notepad -ErrorAction SilentlyContinue) { 1 } else {0} \n\nif($status -eq 0) {\n  $PropertyBag.AddValue("State","Bad")\n}\nelseif($status -eq "Warning") {\n  $PropertyBag.AddValue("State","Warning")\n}\nelse\n{\n  $PropertyBag.AddValue("State","Ok")\n}'),
+            '##ValueName##': this.escapeXml(config.valueName || config.valuename || ''),
+            '##ExpectedValue##': this.escapeXml(config.expectedValue || config.expectedvalue || ''),
             '##AlertPriority##': config.alertPriority || config.alertpriority || 'Normal',
             '##AlertSeverity##': config.alertSeverity || config.alertseverity || 'Error',
-            '##ObjectName##': config.objectName || config.counterObject || config.counterobject || 'Processor',
-            '##CounterName##': config.counterName || config.countername || '% Processor Time',
-            '##CounterObject##': config.counterObject || config.counterobject || 'Processor',
-            '##InstanceName##': config.instanceName || config.instance || '_Total',
-            '##Instance##': config.instanceName || config.instance || '_Total',
+            '##ObjectName##': this.escapeXml(config.objectName || config.counterObject || config.counterobject || 'Processor'),
+            '##CounterName##': this.escapeXml(config.counterName || config.countername || '% Processor Time'),
+            '##CounterObject##': this.escapeXml(config.counterObject || config.counterobject || 'Processor'),
+            '##InstanceName##': this.escapeXml(config.instanceName || config.instance || '_Total'),
+            '##Instance##': this.escapeXml(config.instanceName || config.instance || '_Total'),
             '##FrequencySeconds##': config.frequencySeconds || config.intervalseconds || config.intervalSeconds || '300',
             '##IntervalSeconds##': config.intervalSeconds || config.frequencySeconds || config.intervalseconds || '300',
-            '##EventID##': config.eventId || config.eventid || '1234',
+            '##EventID##': this.escapeXml(config.eventId || config.eventid || '1234'),
             '##Threshold##': config.threshold || config.warningThreshold || config.warningthreshold || '80',
             '##WarningThreshold##': config.warningThreshold || config.warningthreshold || '80',
             '##CriticalThreshold##': config.criticalThreshold || config.criticalthreshold || '95',
             '##Samples##': config.samples || '3',
-            '##ProcessName##': config.processName || config.processname || 'notepad.exe',
+            '##ProcessName##': this.escapeXml(config.processName || config.processname || 'notepad.exe'),
             '##MinProcessCount##': config.minProcessCount || config.minprocesscount || '1',
             '##MaxProcessCount##': config.maxProcessCount || config.maxprocesscount || '10',
             '##MatchCount##': config.matchCount || config.matchcount || '2',
             '##PortNumber##': config.portNumber || config.portnumber || '80',
             '##Protocol##': config.protocol || 'TCP',
             '##Timeout##': config.timeout || '10',
-            '##FolderPath##': config.folderPath || config.folderpath || 'C:\\Logs',
-            '##FileExtensionFilter##': config.fileExtensionFilter || config.fileextensionfilter || config.fileNameFilter || config.filenamefilter || '*.log',
-            '##FileNameFilter##': config.fileNameFilter || config.filenamefilter || '*.log',
+            '##FolderPath##': this.escapeXml(config.folderPath || config.folderpath || 'C:\\Logs'),
+            '##FileExtensionFilter##': this.escapeXml(config.fileExtensionFilter || config.fileextensionfilter || config.fileNameFilter || config.filenamefilter || '*.log'),
+            '##FileNameFilter##': this.escapeXml(config.fileNameFilter || config.filenamefilter || '*.log'),
             '##FileAgeThresholdMinutes##': config.fileAgeThresholdMinutes || config.fileagethresholdminutes || '60',
             '##FileSizeThresholdKB##': config.fileSizeThresholdKB || config.filesizethresholdkb || '1024',
             '##FileCountThreshold##': config.fileCountThreshold || config.filecountthreshold || '1',
-            '##UNCPath##': config.uncPath || config.uncpath || '\\\\server\\share',
+            '##UNCPath##': this.escapeXml(config.uncPath || config.uncpath || '\\\\server\\share'),
             '##WarningThresholdPercent##': config.warningThresholdPercent || config.warningthresholdpercent || '20',
             '##CriticalThresholdPercent##': config.criticalThresholdPercent || config.criticalthresholdpercent || '10',
-            '##SQLServer##': config.sqlServer || config.sqlserver || 'localhost',
-            '##SQLDBName##': config.sqlDBName || config.sqldbname || 'master',
-            '##SQLQuery##': config.sqlQuery || config.sqlquery || 'SELECT 1',
+            '##SQLServer##': this.escapeXml(config.sqlServer || config.sqlserver || 'localhost'),
+            '##SQLDBName##': this.escapeXml(config.sqlDBName || config.sqldbname || 'master'),
+            '##SQLQuery##': this.escapeXml(config.sqlQuery || config.sqlquery || 'SELECT 1'),
             '##RowCountThreshold##': config.rowCountThreshold || config.rowcountthreshold || '1',
-            '##FilePath##': config.filePath || config.filepath || 'C:\\Logs\\app.log',
-            '##SearchString##': config.searchString || config.searchstring || 'ERROR',
+            '##FilePath##': this.escapeXml(config.filePath || config.filepath || 'C:\\Logs\\app.log'),
+            '##SearchString##': this.escapeXml(config.searchString || config.searchstring || 'ERROR'),
             '##MatchThreshold##': config.matchThreshold || config.matchthreshold || '1',
             // Text File Parser Monitor specific placeholders
-            '##LogFilePath##': config.filePath || config.filepath || 'C:\\Logs\\app.log',
-            '##TextStringExpected##': config.searchString || config.searchstring || 'ERROR',
+            '##LogFilePath##': this.escapeXml(config.filePath || config.filepath || 'C:\\Logs\\app.log'),
+            '##TextStringExpected##': this.escapeXml(config.searchString || config.searchstring || 'ERROR'),
             '##ThresholdHours##': config.matchThreshold || config.matchthreshold || '1',
             '##TimeoutSeconds##': config.timeoutSeconds || config.timeoutseconds || '120',
-            '##Param1##': config.param1 || '',
-            '##Param2##': config.param2 || '',
+            '##Param1##': this.escapeXml(config.param1 || ''),
+            '##Param2##': this.escapeXml(config.param2 || ''),
             '##ThresholdMinutes##': config.thresholdMinutes || config.thresholdminutes || '60',
             '##ComparisonType##': config.comparisonType || config.comparisontype || 'Greater Than',
-            '##OID##': config.oid || '1.3.6.1.2.1.1.3.0',
-            '##Community##': config.community || 'public',
+            '##OID##': this.escapeXml(config.oid || '1.3.6.1.2.1.1.3.0'),
+            '##Community##': this.escapeXml(config.community || 'public'),
             '##Port##': config.port || '161',
-            '##ShellCommand##': config.shellCommand || config.shellcommand || 'echo "test"',
-            '##LogName##': config.logName || config.logname || 'Application',
-            '##EventSource##': config.eventSource || config.eventsource || '',
-            '##EventId##': config.eventId || config.eventid || '',
-            '##EventID##': config.eventId || config.eventid || '',
+            '##ShellCommand##': this.escapeXml(config.shellCommand || config.shellcommand || 'echo "test"'),
+            '##LogName##': this.escapeXml(config.logName || config.logname || 'Application'),
+            '##EventSource##': this.escapeXml(config.eventSource || config.eventsource || ''),
+            '##EventId##': this.escapeXml(config.eventId || config.eventid || ''),
+            '##EventID##': this.escapeXml(config.eventId || config.eventid || ''),
             '##EventLevel##': config.eventLevel || config.eventlevel || 'Error',
-            '##Description##': config.description || '',
+            '##Description##': this.escapeXml(config.description || ''),
             '##RepeatCount##': config.repeatCount || config.repeatcount || '5',
-            '##EventId1##': config.eventId1 || config.eventid1 || '',
-            '##EventId2##': config.eventId2 || config.eventid2 || '',
-            '##EventID1##': config.eventId1 || config.eventid1 || '',
-            '##EventID2##': config.eventId2 || config.eventid2 || '',
-            '##LogName1##': config.logName1 || config.logname1 || 'Application',
-            '##LogName2##': config.logName2 || config.logname2 || 'Application',
-            '##EventSource1##': config.eventSource1 || config.eventsource1 || '',
-            '##EventSource2##': config.eventSource2 || config.eventsource2 || '',
+            '##EventId1##': this.escapeXml(config.eventId1 || config.eventid1 || ''),
+            '##EventId2##': this.escapeXml(config.eventId2 || config.eventid2 || ''),
+            '##EventID1##': this.escapeXml(config.eventId1 || config.eventid1 || ''),
+            '##EventID2##': this.escapeXml(config.eventId2 || config.eventid2 || ''),
+            '##LogName1##': this.escapeXml(config.logName1 || config.logname1 || 'Application'),
+            '##LogName2##': this.escapeXml(config.logName2 || config.logname2 || 'Application'),
+            '##EventSource1##': this.escapeXml(config.eventSource1 || config.eventsource1 || ''),
+            '##EventSource2##': this.escapeXml(config.eventSource2 || config.eventsource2 || ''),
             '##IntervalSeconds##': config.intervalSeconds || config.intervalseconds || '300'
         };
 
