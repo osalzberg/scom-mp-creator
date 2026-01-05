@@ -1642,12 +1642,18 @@ $PropertyBag</ScriptBody>
         }
         
         // Validate Event ID fields for event log alert rules
-        if (field.id && (field.id.includes('-eventId') || field.id.includes('-eventid'))) {
+        // Be specific: match exact eventId field names, not fields that contain "eventId" (like "uniqueId")
+        if (field.id && (field.id === 'eventId' || field.id === 'eventId1' || field.id === 'eventId2' || 
+                        field.id.endsWith('-eventId') || field.id.endsWith('-eventid'))) {
             if (value) {
-                const eventId = parseInt(value, 10);
-                if (isNaN(eventId) || eventId < 1 || eventId > 1000) {
-                    this.showFieldError(formGroup, 'Event ID must be between 1 and 1000');
-                    return false;
+                // Allow comma-separated event IDs
+                const eventIds = value.toString().split(',').map(id => id.trim());
+                for (const id of eventIds) {
+                    const eventId = parseInt(id, 10);
+                    if (isNaN(eventId) || eventId < 1 || eventId > 65535) {
+                        this.showFieldError(formGroup, 'Event ID must be between 1 and 65535');
+                        return false;
+                    }
                 }
             }
         }
