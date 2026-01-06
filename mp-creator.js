@@ -13,7 +13,9 @@ class MPCreator {
                 tasks: [],
                 views: []
             },
-            configurations: {}
+            configurations: {},
+            importedMP: null,  // Store imported MP data
+            importedClasses: []  // Store classes from imported MP
         };
         this.fragmentLibrary = {};
         this.instanceCounters = {};  // Track instance numbers for each monitor type
@@ -1137,6 +1139,18 @@ $PropertyBag</ScriptBody>
     }
 
     initializeEventListeners() {
+        // Handle MP file import
+        const importFileInput = document.getElementById('import-mp-file');
+        if (importFileInput) {
+            console.log('Import file input found, adding event listener');
+            importFileInput.addEventListener('change', (e) => {
+                console.log('File selected:', e.target.files[0]);
+                this.handleMPImport(e.target.files[0]);
+            });
+        } else {
+            console.log('Import file input NOT found');
+        }
+        
         document.addEventListener('click', (e) => {
             if (e.target.closest('.discovery-card')) {
                 this.selectDiscoveryCard(e.target.closest('.discovery-card'));
@@ -1210,6 +1224,7 @@ $PropertyBag</ScriptBody>
         });
 
         document.addEventListener('blur', (e) => {
+
             if (e.target.matches('input, select, textarea')) {
                 this.validateField(e.target);
                 
@@ -1224,6 +1239,129 @@ $PropertyBag</ScriptBody>
                 }
             }
         }, true);
+    }
+
+    async handleMPImport(file) {
+        if (!file) return;
+        
+        const statusDiv = document.getElementById('import-mp-status');
+        const filenameSpan = document.getElementById('import-mp-filename');
+        
+        try {
+            statusDiv.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Parsing MP file...';
+            statusDiv.style.color = '#3b82f6';
+            
+            const text = await file.text();
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(text, 'text/xml');
+            
+            // Check for parsing errors
+            const parserError = xmlDoc.querySelector('parsererror');
+            if (parserError) {
+                throw new Error('Invalid XML file');
+            }
+            
+            // Extract MP information - try multiple selectors for compatibility
+            let mpId = '';
+            let version = '1.0.0.0';
+            
+            // Try Identity element first (most common)
+            const identity = xmlDoc.querySelector('Identity ID, Identity > ID');
+            if (identity) {
+                mpId = identity.textContent.trim();
+            }
+            
+            // Try Manifest ID attribute as fallback
+            if (!mpId) {
+                const manifest = xmlDoc.querySelector('Manifest');
+                if (manifest) {
+                    mpId = manifest.getAttribute('ID') || '';
+                }
+            }
+            
+            // Try Version
+            const versionElement = xmlDoc.querySelector('Identity Version, Identity > Version');
+            if (versionElement) {
+                version = versionElement.textContent.trim();
+            }
+            
+            // Parse the ID (format: CompanyID.AppName or CompanyID.AppName.SubName)
+            const idParts = mpId.split('.');
+            const companyId = idParts[0] || '';
+            const appName = idParts.slice(1).join('.') || '';
+            
+            console.log('Extracted MP Info:', { mpId, companyId, appName, version });
+            
+            // Extract classes
+            const classes = [];
+            const classTypes = xmlDoc.querySelectorAll('ClassType');
+            classTypes.forEach(classType => {
+                const id = classType.getAttribute('ID');
+                const base = classType.getAttribute('Base');
+                if (id) {
+                    // Try to find associated discovery and determine its type
+                    let discoveryType = '';
+                    const discoveries = xmlDoc.querySelectorAll('Discovery');
+                    discoveries.forEach(discovery => {
+                        const discoverClass = discovery.querySelector('DiscoveryClass');
+                        if (discoverClass && discoverClass.getAttribute('TypeID') === id) {
+                            // Determine discovery type from DataSource TypeID
+                            const dataSource = discovery.querySelector('DataSource');
+                            if (dataSource) {
+                                const typeId = dataSource.getAttribute('TypeID');
+                                if (typeId) {
+                                    if (typeId.includes('Registry')) discoveryType = 'Registry';
+                                    else if (typeId.includes('WmiProvider')) discoveryType = 'WMI';
+                                    else if (typeId.includes('Script')) discoveryType = 'Script';
+                                    else if (typeId.includes('PowerShell')) discoveryType = 'PowerShell';
+                                    else if (typeId.includes('SNMP')) discoveryType = 'SNMP';
+                                    else discoveryType = 'Custom';
+                                }
+                            }
+                        }
+                    });
+                    
+                    classes.push({
+                        id: id,
+                        name: id.split('.').pop(),
+                        fullId: id,
+                        base: base || 'Unknown',
+                        discoveryType: discoveryType || 'Unknown'
+                    });
+                }
+            });
+            
+            console.log('Found classes:', classes);
+            
+            // Store the imported MP data
+            this.mpData.importedMP = {
+                xml: text,
+                xmlDoc: xmlDoc,
+                companyId: companyId,
+                appName: appName,
+                version: version,
+                fullId: mpId
+            };
+            this.mpData.importedClasses = classes;
+            
+            // Auto-fill basic info - always fill from imported MP
+            document.getElementById('company-id').value = companyId;
+            document.getElementById('app-name').value = appName;
+            document.getElementById('mp-version').value = version;
+            
+            // Show success message
+            filenameSpan.textContent = file.name;
+            filenameSpan.style.color = '#10b981';
+            statusDiv.innerHTML = `<i class="fas fa-check-circle" style="color: #10b981;"></i> <strong>MP imported successfully!</strong><br>
+                <small style="color: #64748b;">Company: ${companyId} | App: ${appName}<br>Found ${classes.length} class(es). You can now add monitors and rules to these classes.</small>`;
+            statusDiv.style.color = '#10b981';
+            
+        } catch (error) {
+            console.error('MP Import Error:', error);
+            statusDiv.innerHTML = `<i class="fas fa-exclamation-circle" style="color: #ef4444;"></i> <strong>Error:</strong> ${error.message}`;
+            statusDiv.style.color = '#ef4444';
+            filenameSpan.textContent = '';
+        }
     }
 
     selectDiscoveryCard(card) {
@@ -1241,19 +1379,37 @@ $PropertyBag</ScriptBody>
                 const container = document.createElement('div');
                 container.id = 'skip-discovery-class-container';
                 container.style.cssText = 'margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px;';
+                
+                // Build options HTML - include imported classes if available
+                let optionsHTML = '<option value="">-- Select a Target Class --</option>';
+                
+                // Add imported classes first
+                if (this.mpData.importedClasses && this.mpData.importedClasses.length > 0) {
+                    optionsHTML += '<optgroup label="Classes from Imported MP">';
+                    this.mpData.importedClasses.forEach(cls => {
+                        const discoveryInfo = cls.discoveryType ? ` [${cls.discoveryType} Discovery]` : '';
+                        optionsHTML += `<option value="${cls.fullId}">${cls.fullId}${discoveryInfo}</option>`;
+                    });
+                    optionsHTML += '</optgroup>';
+                }
+                
+                // Add standard Windows classes
+                optionsHTML += '<optgroup label="Standard Windows Classes">';
+                optionsHTML += '<option value="Windows!Microsoft.Windows.Server.OperatingSystem">Windows Server Operating System</option>';
+                optionsHTML += '<option value="Windows!Microsoft.Windows.Computer">Windows Computer</option>';
+                optionsHTML += '<option value="Windows!Microsoft.Windows.LogicalDisk">Windows Logical Disk</option>';
+                optionsHTML += '<option value="Windows!Microsoft.Windows.Server.6.2.OperatingSystem">Windows Server 2012+ Operating System</option>';
+                optionsHTML += '<option value="Windows!Microsoft.Windows.Server.2016.OperatingSystem">Windows Server 2016+ Operating System</option>';
+                optionsHTML += '<option value="Windows!Microsoft.Windows.Client.OperatingSystem">Windows Client Operating System</option>';
+                optionsHTML += '<option value="System!System.Computer">System Computer</option>';
+                optionsHTML += '</optgroup>';
+                
                 container.innerHTML = `
                     <h4 style="margin-bottom: 15px; color: #2c3e50;">Select Target Class</h4>
                     <div class="form-group">
                         <label for="skip-target-class">Target Class</label>
                         <select id="skip-target-class" class="form-control" required>
-                            <option value="">-- Select a Target Class --</option>
-                            <option value="Windows!Microsoft.Windows.Server.OperatingSystem">Windows Server Operating System</option>
-                            <option value="Windows!Microsoft.Windows.Computer">Windows Computer</option>
-                            <option value="Windows!Microsoft.Windows.LogicalDisk">Windows Logical Disk</option>
-                            <option value="Windows!Microsoft.Windows.Server.6.2.OperatingSystem">Windows Server 2012+ Operating System</option>
-                            <option value="Windows!Microsoft.Windows.Server.2016.OperatingSystem">Windows Server 2016+ Operating System</option>
-                            <option value="Windows!Microsoft.Windows.Client.OperatingSystem">Windows Client Operating System</option>
-                            <option value="System!System.Computer">System Computer</option>
+                            ${optionsHTML}
                         </select>
                         <small style="color: #666; margin-top: 5px; display: block;">Select the class that your monitors/rules will target</small>
                     </div>
@@ -2164,6 +2320,345 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
     }
 
     generateMPXML() {
+        const { companyId, appName, version, description } = this.mpData.basicInfo;
+        const mpId = `${companyId}.${appName}`;
+        
+        // If MP was imported, merge new content into it
+        if (this.mpData.importedMP && this.mpData.importedMP.xmlDoc) {
+            return this.mergeIntoImportedMP();
+        }
+        
+        // Otherwise, create a new MP from scratch
+        return this.generateNewMPXML();
+    }
+
+    mergeIntoImportedMP() {
+        const xmlDoc = this.mpData.importedMP.xmlDoc.cloneNode(true);
+        
+        // Increment the version number
+        const versionElement = xmlDoc.querySelector('Manifest > Identity > Version');
+        if (versionElement) {
+            const currentVersion = versionElement.textContent.trim();
+            const versionParts = currentVersion.split('.');
+            if (versionParts.length === 4) {
+                // Increment the last part (build number)
+                versionParts[3] = (parseInt(versionParts[3]) + 1).toString();
+                const newVersion = versionParts.join('.');
+                versionElement.textContent = newVersion;
+            }
+        }
+        
+        // Process new fragments to add
+        let newFragments = [];
+        
+        // Add monitor fragments
+        if (this.mpData.selectedComponents.monitors && this.mpData.selectedComponents.monitors.length > 0) {
+            this.mpData.selectedComponents.monitors.forEach(monitorInstance => {
+                const monitorType = monitorInstance.type;
+                const instanceId = monitorInstance.instanceId;
+                const fragment = this.fragmentLibrary[monitorType];
+                if (fragment && fragment.template) {
+                    const processedFragment = this.processFragmentTemplate(instanceId, fragment.template, monitorType);
+                    if (processedFragment && processedFragment.trim().length > 0) {
+                        newFragments.push(processedFragment);
+                    }
+                }
+            });
+        }
+        
+        // Add rule fragments
+        if (this.mpData.selectedComponents.rules && this.mpData.selectedComponents.rules.length > 0) {
+            this.mpData.selectedComponents.rules.forEach(ruleType => {
+                const fragment = this.fragmentLibrary[ruleType];
+                if (fragment && fragment.template) {
+                    const processedFragment = this.processFragmentTemplate(ruleType, fragment.template);
+                    if (processedFragment && processedFragment.trim().length > 0) {
+                        newFragments.push(processedFragment);
+                    }
+                }
+            });
+        }
+        
+        if (newFragments.length === 0) {
+            // No new content to add, return original
+            return new XMLSerializer().serializeToString(xmlDoc);
+        }
+        
+        // Parse new fragments and merge into xmlDoc
+        const { typeDefinitions, monitoring, presentation, languagePacks } = this.extractAndCombineSections(newFragments);
+        
+        // Add TypeDefinitions in proper order: EntityTypes, ModuleTypes, MonitorTypes
+        if (typeDefinitions) {
+            const tempDoc = new DOMParser().parseFromString(`<TypeDefinitions>${typeDefinitions}</TypeDefinitions>`, 'text/xml');
+            
+            // Get or create TypeDefinitions section
+            let typeDefsSection = xmlDoc.querySelector('TypeDefinitions');
+            if (!typeDefsSection) {
+                typeDefsSection = xmlDoc.createElement('TypeDefinitions');
+                const manifest = xmlDoc.querySelector('Manifest');
+                if (manifest && manifest.nextSibling) {
+                    manifest.parentNode.insertBefore(typeDefsSection, manifest.nextSibling);
+                } else {
+                    xmlDoc.querySelector('ManagementPack').appendChild(typeDefsSection);
+                }
+            }
+            
+            // Check what sections currently exist
+            let entityTypesSection = typeDefsSection.querySelector('EntityTypes');
+            let moduleTypesSection = typeDefsSection.querySelector('ModuleTypes');
+            let monitorTypesSection = typeDefsSection.querySelector('MonitorTypes');
+            
+            // Add ClassTypes (inside EntityTypes) - should come first
+            const newClassTypes = tempDoc.querySelectorAll('EntityTypes > ClassTypes > *');
+            if (newClassTypes.length > 0) {
+                if (!entityTypesSection) {
+                    entityTypesSection = xmlDoc.createElement('EntityTypes');
+                    // Insert at the beginning
+                    if (typeDefsSection.firstChild) {
+                        typeDefsSection.insertBefore(entityTypesSection, typeDefsSection.firstChild);
+                    } else {
+                        typeDefsSection.appendChild(entityTypesSection);
+                    }
+                }
+                let classTypesSection = entityTypesSection.querySelector('ClassTypes');
+                if (!classTypesSection) {
+                    classTypesSection = xmlDoc.createElement('ClassTypes');
+                    entityTypesSection.appendChild(classTypesSection);
+                }
+                newClassTypes.forEach(classType => {
+                    classTypesSection.appendChild(xmlDoc.importNode(classType, true));
+                });
+            }
+            
+            // Add ModuleTypes - should come after EntityTypes, before MonitorTypes
+            const newModuleTypes = tempDoc.querySelectorAll('ModuleTypes > *');
+            if (newModuleTypes.length > 0) {
+                if (!moduleTypesSection) {
+                    moduleTypesSection = xmlDoc.createElement('ModuleTypes');
+                    // Re-query to get updated positions
+                    entityTypesSection = typeDefsSection.querySelector('EntityTypes');
+                    monitorTypesSection = typeDefsSection.querySelector('MonitorTypes');
+                    
+                    if (monitorTypesSection) {
+                        // Insert before MonitorTypes
+                        typeDefsSection.insertBefore(moduleTypesSection, monitorTypesSection);
+                    } else if (entityTypesSection) {
+                        // Insert after EntityTypes
+                        if (entityTypesSection.nextSibling) {
+                            typeDefsSection.insertBefore(moduleTypesSection, entityTypesSection.nextSibling);
+                        } else {
+                            typeDefsSection.appendChild(moduleTypesSection);
+                        }
+                    } else {
+                        typeDefsSection.appendChild(moduleTypesSection);
+                    }
+                }
+                newModuleTypes.forEach(modType => {
+                    moduleTypesSection.appendChild(xmlDoc.importNode(modType, true));
+                });
+            }
+            
+            // Add MonitorTypes - should come last
+            const newMonitorTypes = tempDoc.querySelectorAll('MonitorTypes > *');
+            if (newMonitorTypes.length > 0) {
+                if (!monitorTypesSection) {
+                    monitorTypesSection = xmlDoc.createElement('MonitorTypes');
+                    // Always append at end
+                    typeDefsSection.appendChild(monitorTypesSection);
+                }
+                newMonitorTypes.forEach(monType => {
+                    monitorTypesSection.appendChild(xmlDoc.importNode(monType, true));
+                });
+            }
+        }
+        
+        // Get or create Monitoring section
+        let monitoringSection = xmlDoc.querySelector('Monitoring');
+        if (!monitoringSection) {
+            monitoringSection = xmlDoc.createElement('Monitoring');
+            const root = xmlDoc.querySelector('ManagementPack');
+            root.appendChild(monitoringSection);
+        }
+        
+        // Add new monitoring content in proper order: Discoveries, Monitors, Rules
+        if (monitoring) {
+            const tempDoc = new DOMParser().parseFromString(`<Monitoring>${monitoring}</Monitoring>`, 'text/xml');
+            
+            // Check what sections currently exist
+            let discoveriesSection = monitoringSection.querySelector('Discoveries');
+            let monitorsSection = monitoringSection.querySelector('Monitors');
+            let rulesSection = monitoringSection.querySelector('Rules');
+            
+            // Add Discoveries (for fragments that include class + discovery)
+            const newDiscoveries = tempDoc.querySelectorAll('Discoveries > *');
+            if (newDiscoveries.length > 0) {
+                if (!discoveriesSection) {
+                    discoveriesSection = xmlDoc.createElement('Discoveries');
+                    // Insert at the beginning
+                    if (monitoringSection.firstChild) {
+                        monitoringSection.insertBefore(discoveriesSection, monitoringSection.firstChild);
+                    } else {
+                        monitoringSection.appendChild(discoveriesSection);
+                    }
+                }
+                newDiscoveries.forEach(discovery => {
+                    discoveriesSection.appendChild(xmlDoc.importNode(discovery, true));
+                });
+            }
+            
+            // Add Monitors (should come after Discoveries, before Rules)
+            const newMonitors = tempDoc.querySelectorAll('Monitors > *');
+            if (newMonitors.length > 0) {
+                if (!monitorsSection) {
+                    monitorsSection = xmlDoc.createElement('Monitors');
+                    // Re-query to get updated positions
+                    discoveriesSection = monitoringSection.querySelector('Discoveries');
+                    rulesSection = monitoringSection.querySelector('Rules');
+                    
+                    if (rulesSection) {
+                        // Insert before Rules
+                        monitoringSection.insertBefore(monitorsSection, rulesSection);
+                    } else if (discoveriesSection) {
+                        // Insert after Discoveries
+                        if (discoveriesSection.nextSibling) {
+                            monitoringSection.insertBefore(monitorsSection, discoveriesSection.nextSibling);
+                        } else {
+                            monitoringSection.appendChild(monitorsSection);
+                        }
+                    } else {
+                        monitoringSection.appendChild(monitorsSection);
+                    }
+                }
+                newMonitors.forEach(monitor => {
+                    monitorsSection.appendChild(xmlDoc.importNode(monitor, true));
+                });
+            }
+            
+            // Add Rules (should come last)
+            const newRules = tempDoc.querySelectorAll('Rules > *');
+            if (newRules.length > 0) {
+                if (!rulesSection) {
+                    rulesSection = xmlDoc.createElement('Rules');
+                    // Always append at end
+                    monitoringSection.appendChild(rulesSection);
+                }
+                newRules.forEach(rule => {
+                    rulesSection.appendChild(xmlDoc.importNode(rule, true));
+                });
+            }
+        }
+        
+        // Add Presentation section (Views, StringResources, etc)
+        if (presentation) {
+            const tempDoc = new DOMParser().parseFromString(`<Presentation>${presentation}</Presentation>`, 'text/xml');
+            
+            // Get or create Presentation section
+            let presentationSection = xmlDoc.querySelector('Presentation');
+            if (!presentationSection) {
+                presentationSection = xmlDoc.createElement('Presentation');
+                const monitoring = xmlDoc.querySelector('Monitoring');
+                if (monitoring && monitoring.nextSibling) {
+                    monitoring.parentNode.insertBefore(presentationSection, monitoring.nextSibling);
+                } else {
+                    xmlDoc.querySelector('ManagementPack').appendChild(presentationSection);
+                }
+            }
+            
+            // Add StringResources
+            const newStringResources = tempDoc.querySelectorAll('StringResources > *');
+            if (newStringResources.length > 0) {
+                let stringResourcesSection = presentationSection.querySelector('StringResources');
+                if (!stringResourcesSection) {
+                    stringResourcesSection = xmlDoc.createElement('StringResources');
+                    presentationSection.appendChild(stringResourcesSection);
+                }
+                newStringResources.forEach(sr => {
+                    stringResourcesSection.appendChild(xmlDoc.importNode(sr, true));
+                });
+            }
+            
+            // Add Views (if any)
+            const newViews = tempDoc.querySelectorAll('Views > *');
+            if (newViews.length > 0) {
+                let viewsSection = presentationSection.querySelector('Views');
+                if (!viewsSection) {
+                    viewsSection = xmlDoc.createElement('Views');
+                    presentationSection.appendChild(viewsSection);
+                }
+                newViews.forEach(view => {
+                    viewsSection.appendChild(xmlDoc.importNode(view, true));
+                });
+            }
+        }
+        
+        // Add new language pack entries
+        if (languagePacks) {
+            const tempDoc = new DOMParser().parseFromString(languagePacks, 'text/xml');
+            const newDisplayStrings = tempDoc.querySelectorAll('DisplayString');
+            
+            if (newDisplayStrings.length > 0) {
+                let languagePacksSection = xmlDoc.querySelector('LanguagePacks');
+                if (!languagePacksSection) {
+                    languagePacksSection = xmlDoc.createElement('LanguagePacks');
+                    xmlDoc.querySelector('ManagementPack').appendChild(languagePacksSection);
+                }
+                
+                let langPack = languagePacksSection.querySelector('LanguagePack[ID="ENU"]');
+                if (!langPack) {
+                    langPack = xmlDoc.createElement('LanguagePack');
+                    langPack.setAttribute('ID', 'ENU');
+                    langPack.setAttribute('IsDefault', 'true');
+                    languagePacksSection.appendChild(langPack);
+                }
+                
+                let displayStringsSection = langPack.querySelector('DisplayStrings');
+                if (!displayStringsSection) {
+                    displayStringsSection = xmlDoc.createElement('DisplayStrings');
+                    langPack.appendChild(displayStringsSection);
+                }
+                
+                newDisplayStrings.forEach(ds => {
+                    displayStringsSection.appendChild(xmlDoc.importNode(ds, true));
+                });
+            }
+        }
+        
+        // Serialize and return
+        const serializer = new XMLSerializer();
+        let xmlString = serializer.serializeToString(xmlDoc);
+        
+        // Format the XML nicely
+        return this.formatXML(xmlString);
+    }
+
+    formatXML(xml) {
+        // Simple XML formatting - add proper indentation
+        const PADDING = '  '; // 2 spaces for indentation
+        const reg = /(>)(<)(\/*)/g;
+        let formatted = '';
+        let pad = 0;
+        
+        xml = xml.replace(reg, '$1\n$2$3');
+        xml.split('\n').forEach((node) => {
+            let indent = 0;
+            if (node.match(/.+<\/\w[^>]*>$/)) {
+                indent = 0;
+            } else if (node.match(/^<\/\w/) && pad > 0) {
+                pad -= 1;
+            } else if (node.match(/^<\w[^>]*[^\/]>.*$/)) {
+                indent = 1;
+            } else {
+                indent = 0;
+            }
+            
+            formatted += PADDING.repeat(pad) + node + '\n';
+            pad += indent;
+        });
+        
+        return formatted.trim();
+    }
+
+    generateNewMPXML() {
         const { companyId, appName, version, description } = this.mpData.basicInfo;
         const mpId = `${companyId}.${appName}`;
         

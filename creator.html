@@ -79,6 +79,7 @@
                 <!-- Step 1: Basic Information -->
                 <div class="form-step active" id="step-1">
                     <h2>Basic Management Pack Information</h2>
+                    
                     <div class="form-grid">
                         <div class="form-group">
                             <label for="company-id">Company ID *</label>
@@ -99,6 +100,30 @@
                             <textarea id="mp-description" placeholder="Describe what this Management Pack monitors"></textarea>
                         </div>
                     </div>
+                    
+                    <!-- Import Existing MP Option -->
+                    <div class="import-mp-section" style="margin-bottom: 30px; padding: 20px; background: #f0f9ff; border-radius: 12px; border: 2px solid #3b82f6;">
+                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 15px;">
+                            <i class="fas fa-file-import" style="color: #3b82f6; font-size: 1.2rem;"></i>
+                            <h3 style="margin: 0; color: #1e293b;">Import Existing Management Pack (Optional)</h3>
+                        </div>
+                        <p style="color: #64748b; margin-bottom: 15px;">Upload an existing MP to add monitors and rules to its classes</p>
+                        <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin-bottom: 15px; border-radius: 4px;">
+                            <p style="margin: 0; color: #92400e; font-size: 0.9rem;">
+                                <i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>
+                                <strong>Note:</strong> Only upload Management Packs that were previously created using this tool. Uploading MPs created with other tools may result in unexpected behavior.
+                            </p>
+                        </div>
+                        <div class="form-group">
+                            <input type="file" id="import-mp-file" accept=".xml,.mp,.mpb" style="display: none;">
+                            <button type="button" class="btn btn--secondary" onclick="document.getElementById('import-mp-file').click()">
+                                <i class="fas fa-upload"></i> Choose MP File
+                            </button>
+                            <span id="import-mp-filename" style="margin-left: 15px; color: #64748b; font-size: 0.9rem;"></span>
+                        </div>
+                        <div id="import-mp-status" style="margin-top: 10px;"></div>
+                    </div>
+                    
                     <div class="form-actions">
                         <button type="button" class="btn btn--primary" onclick="nextStep()">Next</button>
                     </div>
