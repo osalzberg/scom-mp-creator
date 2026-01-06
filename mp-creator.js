@@ -1447,11 +1447,45 @@ $PropertyBag</ScriptBody>
                     }
                 });
             } else {
-                // Container already exists, just make sure it's visible
+                // Container already exists - rebuild dropdown to include newly imported classes
                 skipClassContainer.style.display = 'block';
                 
-                // Make sure Next button is disabled if no class is selected
+                // Rebuild options HTML with imported classes
+                let optionsHTML = '<option value="">-- Select a Target Class --</option>';
+                
+                // Add imported classes first
+                if (this.mpData.importedClasses && this.mpData.importedClasses.length > 0) {
+                    optionsHTML += '<optgroup label="Classes from Imported MP">';
+                    this.mpData.importedClasses.forEach(cls => {
+                        const discoveryInfo = cls.discoveryType ? ` [${cls.discoveryType} Discovery]` : '';
+                        optionsHTML += `<option value="${cls.fullId}">${cls.fullId}${discoveryInfo}</option>`;
+                    });
+                    optionsHTML += '</optgroup>';
+                }
+                
+                // Add standard Windows classes
+                optionsHTML += '<optgroup label="Standard Windows Classes">';
+                optionsHTML += '<option value="Windows!Microsoft.Windows.Server.OperatingSystem">Windows Server Operating System</option>';
+                optionsHTML += '<option value="Windows!Microsoft.Windows.Computer">Windows Computer</option>';
+                optionsHTML += '<option value="Windows!Microsoft.Windows.LogicalDisk">Windows Logical Disk</option>';
+                optionsHTML += '<option value="Windows!Microsoft.Windows.Server.6.2.OperatingSystem">Windows Server 2012+ Operating System</option>';
+                optionsHTML += '<option value="Windows!Microsoft.Windows.Server.2016.OperatingSystem">Windows Server 2016+ Operating System</option>';
+                optionsHTML += '<option value="Windows!Microsoft.Windows.Client.OperatingSystem">Windows Client Operating System</option>';
+                optionsHTML += '<option value="System!System.Computer">System Computer</option>';
+                optionsHTML += '</optgroup>';
+                
+                // Update the select element
                 const targetClassSelect = document.getElementById('skip-target-class');
+                if (targetClassSelect) {
+                    const currentValue = targetClassSelect.value;
+                    targetClassSelect.innerHTML = optionsHTML;
+                    // Try to restore previous selection if it still exists
+                    if (currentValue && Array.from(targetClassSelect.options).some(opt => opt.value === currentValue)) {
+                        targetClassSelect.value = currentValue;
+                    }
+                }
+                
+                // Make sure Next button is disabled if no class is selected
                 const nextBtn = document.getElementById('next-discovery');
                 if (nextBtn && targetClassSelect) {
                     nextBtn.disabled = !targetClassSelect.value;
