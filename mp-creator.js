@@ -2,7 +2,7 @@
 class MPCreator {
     constructor() {
         this.currentStep = 1;
-        this.totalSteps = 6;
+        this.totalSteps = 5;
         this.mpData = {
             basicInfo: {},
             selectedComponents: {
@@ -1183,7 +1183,7 @@ $PropertyBag</ScriptBody>
             if (e.target.closest('#component-configs')) {
                 this.saveConfigurationData();
                 // Auto-update preview on step 6
-                if (this.currentStep === 6) {
+                if (this.currentStep === 5) {
                     this.autoGeneratePreview();
                 }
             }
@@ -1205,7 +1205,7 @@ $PropertyBag</ScriptBody>
             if (e.target.closest('#component-configs')) {
                 this.saveConfigurationData();
                 // Auto-update preview on step 6 with debounce
-                if (this.currentStep === 6) {
+                if (this.currentStep === 5) {
                     clearTimeout(this.previewDebounceTimer);
                     this.previewDebounceTimer = setTimeout(() => {
                         this.autoGeneratePreview();
@@ -1214,7 +1214,7 @@ $PropertyBag</ScriptBody>
                 }
             }
             // Also handle management group name input
-            if (e.target.id === 'management-group-name' && this.currentStep === 6) {
+            if (e.target.id === 'management-group-name' && this.currentStep === 5) {
                 clearTimeout(this.previewDebounceTimer);
                 this.previewDebounceTimer = setTimeout(() => {
                     this.autoGeneratePreview();
@@ -1232,7 +1232,7 @@ $PropertyBag</ScriptBody>
                 if (e.target.closest('#component-configs')) {
                     this.saveConfigurationData();
                     // Auto-update preview on step 6
-                    if (this.currentStep === 6) {
+                    if (this.currentStep === 5) {
                         this.autoGeneratePreview();
                         updateDownloadButtons();
                     }
@@ -1507,7 +1507,7 @@ $PropertyBag</ScriptBody>
                 this.updateStepDisplay(previousStep);
                 
                 // Generate configuration forms if navigating to step 6
-                if (this.currentStep === 6) {
+                if (this.currentStep === 5) {
                     this.generateConfigurationForms();
                 }
             } else {
@@ -1676,7 +1676,7 @@ $PropertyBag</ScriptBody>
         this.showNotification(`Added another instance of ${this.fragmentLibrary[componentType]?.name || componentType}`, 'success');
         
         // If we're on step 6, regenerate the configuration forms
-        if (this.currentStep === 6) {
+        if (this.currentStep === 5) {
             this.generateConfigurationForms();
         }
     }
@@ -1713,7 +1713,7 @@ $PropertyBag</ScriptBody>
             }
             
             // If we're on step 6, regenerate the configuration forms
-            if (this.currentStep === 6) {
+            if (this.currentStep === 5) {
                 this.generateConfigurationForms();
             }
         } else if (instances.length === 1) {
@@ -1754,7 +1754,7 @@ $PropertyBag</ScriptBody>
         }
         
         // If we're on step 6, regenerate the configuration forms
-        if (this.currentStep === 6) {
+        if (this.currentStep === 5) {
             this.generateConfigurationForms();
         }
     }
@@ -1837,7 +1837,7 @@ $PropertyBag</ScriptBody>
                 this.currentStep++;
                 this.updateStepDisplay();
                 
-                if (this.currentStep === 6) {
+                if (this.currentStep === 5) {
                     this.generateConfigurationForms();
                 }
             }
@@ -1949,7 +1949,7 @@ $PropertyBag</ScriptBody>
         this.scrollToCurrentStep();
         
         // Auto-generate preview if we're on step 6
-        if (this.currentStep === 6) {
+        if (this.currentStep === 5) {
             setTimeout(() => {
                 updateDownloadButtons();
                 this.autoGeneratePreview();
