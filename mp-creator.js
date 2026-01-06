@@ -2747,6 +2747,7 @@ ${languagePacks ? `${languagePacks}` : ''}
         let monitors = [];
         let rules = [];
         let displayStrings = [];
+        let views = [];
         
         fragments.forEach((fragmentXml, index) => {
             if (!fragmentXml || fragmentXml.trim().length === 0) {
@@ -2800,6 +2801,12 @@ ${languagePacks ? `${languagePacks}` : ''}
                 const ruleNodes = doc.querySelectorAll('Monitoring > Rules > Rule');
                 ruleNodes.forEach(node => {
                     rules.push(this.nodeToString(node));
+                });
+                
+                // Extract Views
+                const viewNodes = doc.querySelectorAll('Presentation > Views > View');
+                viewNodes.forEach(node => {
+                    views.push(this.nodeToString(node));
                 });
                 
                 // Extract Display Strings
@@ -2884,11 +2891,21 @@ ${rules.map(rule => '      ' + rule).join('\n')}
         });
         
         let combinedPresentation = '';
-        if (displayStrings.length > 0 || stringResources.length > 0) {
-            combinedPresentation = `    <StringResources>
-${stringResources.join('\n')}
-    </StringResources>`;
+        let presentationSections = [];
+        
+        if (views.length > 0) {
+            presentationSections.push(`    <Views>
+${views.map(view => '      ' + view).join('\n')}
+    </Views>`);
         }
+        
+        if (displayStrings.length > 0 || stringResources.length > 0) {
+            presentationSections.push(`    <StringResources>
+${stringResources.join('\n')}
+    </StringResources>`);
+        }
+        
+        combinedPresentation = presentationSections.join('\n');
         
         let combinedLanguagePacks = '';
         if (displayStrings.length > 0) {
