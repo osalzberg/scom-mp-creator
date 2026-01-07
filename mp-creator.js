@@ -1371,6 +1371,12 @@ $PropertyBag</ScriptBody>
         const discoveryType = card.dataset.discovery;
         this.mpData.selectedComponents.discovery = discoveryType;
         
+        // Remove any existing discovery configuration containers
+        const existingConfigContainer = document.getElementById('discovery-config-container');
+        if (existingConfigContainer) {
+            existingConfigContainer.remove();
+        }
+        
         // Show target class selection if skip discovery is selected
         let skipClassContainer = document.getElementById('skip-discovery-class-container');
         if (discoveryType === 'skip') {
@@ -1495,6 +1501,33 @@ $PropertyBag</ScriptBody>
             // Hide the container if switching away from skip
             if (skipClassContainer) {
                 skipClassContainer.style.display = 'none';
+            }
+            
+            // Show configuration form for discoveries that need input
+            if (this.fragmentLibrary[discoveryType] && this.fragmentLibrary[discoveryType].fields && 
+                this.fragmentLibrary[discoveryType].fields.length > 0) {
+                
+                const configContainer = document.createElement('div');
+                configContainer.id = 'discovery-config-container';
+                configContainer.style.cssText = 'margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px;';
+                
+                configContainer.innerHTML = `
+                    <h4 style="margin-bottom: 15px; color: #2c3e50;">Configure ${this.fragmentLibrary[discoveryType].name}</h4>
+                    <div class="config-fields">
+                        ${this.generateConfigFields(discoveryType, this.fragmentLibrary[discoveryType].fields)}
+                    </div>
+                `;
+                
+                const discoveryOptions = card.closest('.discovery-options');
+                if (discoveryOptions) {
+                    discoveryOptions.insertAdjacentElement('afterend', configContainer);
+                    
+                    // Add event listeners to save configuration data
+                    configContainer.querySelectorAll('input, select, textarea').forEach(input => {
+                        input.addEventListener('change', () => this.saveConfigurationData());
+                        input.addEventListener('blur', () => this.saveConfigurationData());
+                    });
+                }
             }
         }
         
