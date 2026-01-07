@@ -10,6 +10,8 @@ body {
     line-height: 1.6;
     color: #333;
     overflow-x: hidden;
+    background: linear-gradient(135deg, #f0f4ff 0%, #faf5ff 100%);
+    min-height: 100vh;
 }
 
 /* Utility Classes */
@@ -29,7 +31,7 @@ body {
 }
 
 .section--light {
-    background: #f8fafc;
+    background: transparent;
 }
 
 .section__header {
@@ -197,7 +199,7 @@ body {
 /* Hero Section */
 .hero {
     padding: 120px 0 80px;
-    background: #f8fafc;
+    background: transparent;
     position: relative;
     overflow: hidden;
     min-height: 100vh;
