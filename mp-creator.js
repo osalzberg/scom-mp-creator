@@ -370,7 +370,7 @@ $momapi.LogScriptEvent($ScriptName,$EventID,0,"\`n Script Completed. \`n Script 
             },
             'script-discovery': {
                 name: 'Script Discovery',
-                template: 'Class.And.Discovery.Script.mpx',
+                template: 'Class.And.Discovery.Script.PowerShell.mpx',
                 fields: [
                     { id: 'scriptType', label: 'Script Type', type: 'select', options: ['PowerShell', 'VBScript'], value: 'PowerShell' },
                     { id: 'scriptBody', label: 'Script Content', type: 'textarea', required: true, placeholder: 'param($SourceId,$ManagedEntityId,$ComputerName)\n\n# Load MOMScript API\n$momapi = New-Object -comObject MOM.ScriptAPI\n$DiscoveryData = $momapi.CreateDiscoveryData(0, $SourceId, $ManagedEntityId)\n\n# Your discovery logic here\n$Folder = "C:\\MyApp"\nIf (Test-Path $Folder) {\n    $instance = $DiscoveryData.CreateClassInstance("$MPElement[Name=\'##CompanyID##.##AppName##.##UniqueID##.Class\']$")\n    $instance.AddProperty("$MPElement[Name=\'Windows!Microsoft.Windows.Computer\']/PrincipalName$", $ComputerName)\n    $instance.AddProperty("$MPElement[Name=\'System!System.Entity\']/DisplayName$", $ComputerName)\n    $DiscoveryData.AddInstance($instance)\n}\n\n# Return Discovery Data\n$DiscoveryData' },
