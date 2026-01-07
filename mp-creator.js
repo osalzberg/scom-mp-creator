@@ -2331,7 +2331,7 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
 
     saveConfigurationData() {
         // Save configuration data from all visible config forms
-        const allConfigInputs = document.querySelectorAll('#component-configs input, #component-configs select, #component-configs textarea');
+        const allConfigInputs = document.querySelectorAll('#component-configs input, #component-configs select, #component-configs textarea, #discovery-config-container input, #discovery-config-container select, #discovery-config-container textarea');
         
         allConfigInputs.forEach(input => {
             const id = input.id;
