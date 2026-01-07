@@ -2161,18 +2161,22 @@ $PropertyBag</ScriptBody>
         return fields.map(field => {
             const fieldId = `${componentType}-${field.id}`;
             const required = field.required ? 'required' : '';
-            const value = field.value || '';
+            
+            // Check if there's saved configuration data for this field
+            const savedConfig = this.mpData.configurations[componentType] || {};
+            const savedValue = savedConfig[field.id];
+            const value = savedValue !== undefined ? savedValue : (field.value || '');
             const placeholder = field.placeholder || '';
             
             let input;
             switch (field.type) {
                 case 'select':
                     const options = field.options.map(opt => {
-                        const selected = (field.value && opt === field.value) ? 'selected' : '';
+                        const selected = (value && opt === value) ? 'selected' : '';
                         return `<option value="${opt}" ${selected}>${opt}</option>`;
                     }).join('');
                     
-                    const defaultOption = field.value ? '' : '<option value="">Select...</option>';
+                    const defaultOption = value ? '' : '<option value="">Select...</option>';
                     input = `<select id="${fieldId}" ${required}>${defaultOption}${options}</select>`;
                     break;
                 case 'textarea':
