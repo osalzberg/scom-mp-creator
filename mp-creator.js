@@ -3276,14 +3276,24 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
             processedTemplate = processedTemplate.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value);
         }
         
-        // Special handling: Replace content between <ScriptBody> tags with user's script
-        // This handles templates that don't use ##ScriptBody## placeholder
+        // Special handling: Replace script content in <ScriptBody> tags
         if (config.scriptBody || config.scriptbody) {
             const scriptBodyContent = this.escapeXml(config.scriptBody || config.scriptbody);
-            processedTemplate = processedTemplate.replace(
-                /<ScriptBody>[\s\S]*?<\/ScriptBody>/g,
-                `<ScriptBody>${scriptBodyContent}</ScriptBody>`
-            );
+            
+            // For monitors: Only replace the MAIN script section (between comments)
+            if (processedTemplate.includes('# Begin MAIN script section') && processedTemplate.includes('# End MAIN script section')) {
+                processedTemplate = processedTemplate.replace(
+                    /(# Begin MAIN script section\s*#=+\s*)([\s\S]*?)(\s*#=+\s*# End MAIN script section)/,
+                    `$1\n${scriptBodyContent}\n$3`
+                );
+            }
+            // For discoveries: Replace entire ScriptBody content
+            else {
+                processedTemplate = processedTemplate.replace(
+                    /<ScriptBody>[\s\S]*?<\/ScriptBody>/g,
+                    `<ScriptBody>${scriptBodyContent}</ScriptBody>`
+                );
+            }
         }
         
         return processedTemplate;
