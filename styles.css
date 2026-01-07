@@ -10,6 +10,7 @@ body {
     line-height: 1.6;
     color: #333;
     overflow-x: hidden;
+    background: linear-gradient(135deg, #e0e7ff 0%, #fae8ff 100%);
 }
 
 /* Utility Classes */
@@ -29,7 +30,7 @@ body {
 }
 
 .section--light {
-    background: #f8fafc;
+    background: linear-gradient(135deg, rgba(224, 231, 255, 0.5) 0%, rgba(250, 232, 255, 0.5) 100%);
 }
 
 .section__header {
@@ -197,7 +198,7 @@ body {
 /* Hero Section */
 .hero {
     padding: 120px 0 80px;
-    background: #f8fafc;
+    background: linear-gradient(135deg, #e0e7ff 0%, #fae8ff 100%);
     position: relative;
     overflow: hidden;
     min-height: 100vh;
