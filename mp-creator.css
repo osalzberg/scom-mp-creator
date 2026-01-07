@@ -175,13 +175,13 @@
 
 /* Creator Form */
 .creator-form {
-    background: white;
+    background: transparent;
     border-radius: 20px;
     padding: 50px;
-    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+    box-shadow: none;
     max-width: 1000px;
     margin: 0 auto;
-    border: 1px solid rgba(255, 255, 255, 0.8);
+    border: none;
 }
 
 .form-step {
