@@ -134,10 +134,10 @@ body {
     position: fixed;
     top: 0;
     width: 100%;
-    background: rgba(255, 255, 255, 0.95);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.95), rgba(139, 92, 246, 0.95));
     backdrop-filter: blur(10px);
     z-index: 1000;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
     transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
                 background 0.3s ease, 
                 box-shadow 0.3s ease;
@@ -156,7 +156,7 @@ body {
     gap: 10px;
     font-size: 1.5rem;
     font-weight: 700;
-    color: #1e293b;
+    color: #ffffff;
     text-decoration: none;
     transition: opacity 0.3s ease;
 }
@@ -166,7 +166,7 @@ body {
 }
 
 .nav__brand i {
-    color: #3b82f6;
+    color: #ffffff;
     font-size: 1.8rem;
 }
 
@@ -178,19 +178,19 @@ body {
 
 .nav__link {
     text-decoration: none;
-    color: #475569;
+    color: rgba(255, 255, 255, 0.9);
     font-weight: 500;
     transition: color 0.3s ease;
 }
 
 .nav__link:hover {
-    color: #3b82f6;
+    color: #ffffff;
 }
 
 .nav__toggle {
     display: none;
     font-size: 1.5rem;
-    color: #1e293b;
+    color: #ffffff;
     cursor: pointer;
 }
 
