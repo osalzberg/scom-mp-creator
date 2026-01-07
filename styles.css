@@ -10,7 +10,6 @@ body {
     line-height: 1.6;
     color: #333;
     overflow-x: hidden;
-    background: linear-gradient(135deg, #e0e7ff 0%, #fae8ff 100%);
 }
 
 /* Utility Classes */
@@ -30,7 +29,7 @@ body {
 }
 
 .section--light {
-    background: linear-gradient(135deg, rgba(224, 231, 255, 0.5) 0%, rgba(250, 232, 255, 0.5) 100%);
+    background: #f8fafc;
 }
 
 .section__header {
@@ -135,10 +134,10 @@ body {
     position: fixed;
     top: 0;
     width: 100%;
-    background: linear-gradient(135deg, rgba(59, 130, 246, 0.95), rgba(139, 92, 246, 0.95));
+    background: rgba(255, 255, 255, 0.95);
     backdrop-filter: blur(10px);
     z-index: 1000;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.1);
     transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
                 background 0.3s ease, 
                 box-shadow 0.3s ease;
@@ -157,7 +156,7 @@ body {
     gap: 10px;
     font-size: 1.5rem;
     font-weight: 700;
-    color: #ffffff;
+    color: #1e293b;
     text-decoration: none;
     transition: opacity 0.3s ease;
 }
@@ -167,7 +166,7 @@ body {
 }
 
 .nav__brand i {
-    color: #ffffff;
+    color: #3b82f6;
     font-size: 1.8rem;
 }
 
@@ -179,26 +178,26 @@ body {
 
 .nav__link {
     text-decoration: none;
-    color: rgba(255, 255, 255, 0.9);
+    color: #475569;
     font-weight: 500;
     transition: color 0.3s ease;
 }
 
 .nav__link:hover {
-    color: #ffffff;
+    color: #3b82f6;
 }
 
 .nav__toggle {
     display: none;
     font-size: 1.5rem;
-    color: #ffffff;
+    color: #1e293b;
     cursor: pointer;
 }
 
 /* Hero Section */
 .hero {
     padding: 120px 0 80px;
-    background: linear-gradient(135deg, #e0e7ff 0%, #fae8ff 100%);
+    background: #f8fafc;
     position: relative;
     overflow: hidden;
     min-height: 100vh;
