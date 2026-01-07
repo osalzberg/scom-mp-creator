@@ -1371,12 +1371,6 @@ $PropertyBag</ScriptBody>
         const discoveryType = card.dataset.discovery;
         this.mpData.selectedComponents.discovery = discoveryType;
         
-        // Remove any existing discovery configuration containers
-        const existingConfigContainer = document.getElementById('discovery-config-container');
-        if (existingConfigContainer) {
-            existingConfigContainer.remove();
-        }
-        
         // Show target class selection if skip discovery is selected
         let skipClassContainer = document.getElementById('skip-discovery-class-container');
         if (discoveryType === 'skip') {
@@ -1501,33 +1495,6 @@ $PropertyBag</ScriptBody>
             // Hide the container if switching away from skip
             if (skipClassContainer) {
                 skipClassContainer.style.display = 'none';
-            }
-            
-            // Show configuration form for discoveries that need input
-            if (this.fragmentLibrary[discoveryType] && this.fragmentLibrary[discoveryType].fields && 
-                this.fragmentLibrary[discoveryType].fields.length > 0) {
-                
-                const configContainer = document.createElement('div');
-                configContainer.id = 'discovery-config-container';
-                configContainer.style.cssText = 'margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px;';
-                
-                configContainer.innerHTML = `
-                    <h4 style="margin-bottom: 15px; color: #2c3e50;">Configure ${this.fragmentLibrary[discoveryType].name}</h4>
-                    <div class="config-fields">
-                        ${this.generateConfigFields(discoveryType, this.fragmentLibrary[discoveryType].fields)}
-                    </div>
-                `;
-                
-                const discoveryOptions = card.closest('.discovery-options');
-                if (discoveryOptions) {
-                    discoveryOptions.insertAdjacentElement('afterend', configContainer);
-                    
-                    // Add event listeners to save configuration data
-                    configContainer.querySelectorAll('input, select, textarea').forEach(input => {
-                        input.addEventListener('change', () => this.saveConfigurationData());
-                        input.addEventListener('blur', () => this.saveConfigurationData());
-                    });
-                }
             }
         }
         
@@ -2331,7 +2298,7 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
 
     saveConfigurationData() {
         // Save configuration data from all visible config forms
-        const allConfigInputs = document.querySelectorAll('#component-configs input, #component-configs select, #component-configs textarea, #discovery-config-container input, #discovery-config-container select, #discovery-config-container textarea');
+        const allConfigInputs = document.querySelectorAll('#component-configs input, #component-configs select, #component-configs textarea');
         
         allConfigInputs.forEach(input => {
             const id = input.id;
@@ -2381,6 +2348,11 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
                     
                     // Save the value even if it's empty (might be intentional)
                     this.mpData.configurations[componentType][fieldName] = value;
+                    
+                    // Debug logging for script-discovery
+                    if (componentType === 'script-discovery') {
+                        console.log(`Saving script-discovery config: ${fieldName} = ${value ? value.substring(0, 50) + '...' : '(empty)'}`);
+                    }
                 }
             }
         });
@@ -3198,6 +3170,12 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
             }
         }
         
+        // Debug logging for script-discovery
+        if (componentType === 'script-discovery') {
+            console.log('Processing script-discovery template with config:', config);
+            console.log('scriptBody value:', config.scriptBody || config.scriptbody || '(not found)');
+        }
+        
         // Create replacement map
         // Security: Apply XML encoding to all user-provided values
         const replacements = {
@@ -3296,6 +3274,16 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
         let processedTemplate = template;
         for (const [placeholder, value] of Object.entries(replacements)) {
             processedTemplate = processedTemplate.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value);
+        }
+        
+        // Special handling: Replace content between <ScriptBody> tags with user's script
+        // This handles templates that don't use ##ScriptBody## placeholder
+        if (config.scriptBody || config.scriptbody) {
+            const scriptBodyContent = this.escapeXml(config.scriptBody || config.scriptbody);
+            processedTemplate = processedTemplate.replace(
+                /<ScriptBody>[\s\S]*?<\/ScriptBody>/g,
+                `<ScriptBody>${scriptBodyContent}</ScriptBody>`
+            );
         }
         
         return processedTemplate;
