@@ -41,6 +41,63 @@ class MPCreator {
             .replace(/'/g, '&apos;');
     }
 
+    isLinuxDiscoveryType(discoveryType) {
+        return discoveryType === 'linux-shell-script-discovery' ||
+            discoveryType === 'linux-nfs-discovery';
+    }
+
+    isValidScomElementIdentifier(value) {
+        return typeof value === 'string' && /^[A-Za-z_][A-Za-z0-9_]*$/.test(value);
+    }
+
+    isPositiveInteger(value) {
+        return typeof value === 'string' &&
+            /^[1-9][0-9]*$/.test(value) &&
+            Number(value) <= 2147483647;
+    }
+
+    validateLinuxDiscoveryConfiguration(discoveryType, config) {
+        if (!this.isLinuxDiscoveryType(discoveryType)) return;
+
+        const uniqueId = (config.uniqueId || config.uniqueid || '').toString().trim();
+        if (!this.isValidScomElementIdentifier(uniqueId)) {
+            throw new Error('Class / Discovery Unique ID must start with a letter or underscore and contain only letters, numbers, and underscores.');
+        }
+
+        const intervalSeconds = (config.intervalSeconds || config.intervalseconds || '').toString().trim();
+        if (!this.isPositiveInteger(intervalSeconds)) {
+            throw new Error('Discovery Interval must be a whole number from 1 through 2147483647 seconds.');
+        }
+
+        const timeoutSeconds = (config.timeoutSeconds || config.timeoutseconds || '').toString().trim();
+        if (!this.isPositiveInteger(timeoutSeconds)) {
+            throw new Error('Shell Command Timeout must be a whole number from 1 through 2147483647 seconds.');
+        }
+    }
+
+    getLinuxIncompatibleSelections() {
+        if (!this.isLinuxDiscoveryType(this.mpData.selectedComponents.discovery)) return [];
+
+        const selected = this.mpData.selectedComponents;
+        const types = [
+            ...(selected.monitors || []).map(item => typeof item === 'string' ? item : item.type),
+            ...(selected.rules || []).filter(type => type !== 'snmp-alert'),
+            ...(selected.tasks || [])
+        ].filter(Boolean);
+
+        return [...new Set(types)];
+    }
+
+    assertComponentCompatibility() {
+        const incompatible = this.getLinuxIncompatibleSelections();
+        if (incompatible.length === 0) return;
+
+        const names = incompatible.map(type => this.fragmentLibrary[type]?.name || type);
+        throw new Error(
+            `Linux Shell Script Discovery cannot be combined with the current Windows-only monitor, rule, or task templates. Remove: ${names.join(', ')}.`
+        );
+    }
+
     // Security: HTML encoding for display to prevent XSS
     escapeHtml(unsafe) {
         if (typeof unsafe !== 'string') return unsafe;
@@ -58,6 +115,29 @@ class MPCreator {
     }
 
     loadFragmentLibrary() {
+        // Shared field layout for the Linux Shell Script Discovery family (the generic
+        // capability and the NFS starter both use the same underlying fragment template
+        // and field shape, differing only in the pre-filled default values below).
+        const buildLinuxShellDiscoveryFields = (defaults) => ([
+            { id: 'uniqueId', label: 'Class / Discovery Unique ID', type: 'text', required: true, value: defaults.uniqueId, pattern: '[A-Za-z_][A-Za-z0-9_]*',
+                help: 'Short unique suffix used to build the class and discovery IDs. Must start with a letter or underscore and contain only letters, numbers, and underscores (for example, "NFSMount").' },
+            { id: 'shellCommand', label: 'Shell Command (runs on the Linux/Unix agent)', type: 'textarea', required: true, preserveWhitespace: true, value: defaults.shellCommand,
+                help: 'POSIX shell command executed on the target via the Microsoft Unix/Linux (SCX) agent. Its standard output is passed to the Parsing Script below. Emit ONE line per discovered object.' },
+            { id: 'parsingScript', label: 'PowerShell Parsing Script (runs on the management server)', type: 'textarea', required: true, preserveWhitespace: true, value: defaults.parsingScript,
+                help: 'Receives $StdOut, $ReturnCode, and $StdErr. Shell failures are rejected before this parser runs, and parser output is buffered until successful completion. Throw on any malformed row so no partial snapshot is published. A successful empty DiscoveryData snapshot intentionally removes objects that no longer exist.' },
+            { id: 'keyPropertyName', label: 'Key Property Name', type: 'text', required: true, value: defaults.keyPropertyName,
+                help: 'Uniquely identifies each discovered object on a given Linux/Unix computer (e.g. MountPoint). Letters, numbers, and underscore only.' },
+            { id: 'property2Name', label: 'Property 2 Name', type: 'text', required: false, value: defaults.property2Name },
+            { id: 'property3Name', label: 'Property 3 Name', type: 'text', required: false, value: defaults.property3Name },
+            { id: 'property4Name', label: 'Property 4 Name', type: 'text', required: false, value: defaults.property4Name },
+            { id: 'intervalSeconds', label: 'Discovery Interval (seconds)', type: 'number', required: true, value: defaults.intervalSeconds || '14400', min: 1, max: 2147483647, step: 1,
+                help: 'How often the shell command runs. Default 14400 = every 4 hours.' },
+            { id: 'timeoutSeconds', label: 'Shell Command Timeout (seconds)', type: 'number', required: true, value: defaults.timeoutSeconds || '120', min: 1, max: 2147483647, step: 1,
+                help: 'Maximum shell-command runtime. Enter a whole number from 1 through 2147483647 seconds.' },
+            { id: 'privileged', label: 'Requires Root/Privileged Access?', type: 'select', options: ['No', 'Yes'], value: defaults.privileged || 'No',
+                help: 'Select Yes only if the shell command needs elevated (root) privileges on the Linux/Unix agent. Uses the Unix/Linux Privileged run-as account instead of the default action account.' }
+        ]);
+
         this.fragmentLibrary = {
             'registry-key': {
                 name: 'Registry Key Discovery',
@@ -368,12 +448,189 @@ $momapi.LogScriptEvent($ScriptName,$EventID,0,"\`n Script Completed. \`n Script 
                     { id: 'targetClass', label: 'Target Class', type: 'select', options: ['Windows!Microsoft.Windows.Server.OperatingSystem', 'Windows!Microsoft.Windows.Computer'], value: 'Windows!Microsoft.Windows.Server.OperatingSystem' }
                 ]
             },
+            'linux-shell-script-discovery': {
+                name: 'Linux Shell Script Discovery',
+                template: 'Class.And.Discovery.Linux.ShellScript.mpx',
+                fields: buildLinuxShellDiscoveryFields({
+                    uniqueId: 'LinuxApp',
+                    shellCommand: `# Example: discover each immediate entry in /opt/myapp without parsing metadata output.
+# Names and paths are UTF-8 hex encoded, so spaces, tabs, pipes, and symlink arrows
+# cannot corrupt record boundaries. Symlinks (including symlinked directories) are
+# included as type "symlink" and are never traversed.
+directory='/opt/myapp'
+if [ ! -d "$directory" ] || [ ! -r "$directory" ] || [ ! -x "$directory" ]; then
+    printf 'Cannot access discovery source directory: %s\\n' "$directory" >&2
+    exit 1
+fi
+
+encode_hex() {
+    LC_ALL=C od -An -v -tx1 | awk '{ for (i = 1; i <= NF; i++) printf "%s", $i }'
+}
+
+for entry in "$directory"/* "$directory"/.[!.]* "$directory"/..?*; do
+    if [ ! -e "$entry" ] && [ ! -L "$entry" ]; then
+        continue
+    fi
+
+    name=\${entry##*/}
+    if [ -L "$entry" ]; then
+        entry_type='symlink'
+    elif [ -d "$entry" ]; then
+        entry_type='directory'
+    elif [ -f "$entry" ]; then
+        entry_type='file'
+    else
+        entry_type='other'
+    fi
+
+    name_hex=$(printf '%s' "$name" | encode_hex) || exit 1
+    path_hex=$(printf '%s' "$entry" | encode_hex) || exit 1
+    printf '%s\\t%s\\t%s\\t%s\\n' "$name_hex" "$path_hex" "$entry_type" 'immediate-child'
+done`,
+                    parsingScript: `#=================================================================================
+#  Linux Shell Script Discovery - PowerShell parsing script
+#  Parses the multi-line $StdOut produced by the starter Shell Command above.
+#  Expected format: tab-separated UTF-8 hex key/path plus type and scope:
+#    <HexName><TAB><HexPath><TAB><EntryType><TAB><Scope>
+#  Customize the parsing logic below to match your shell command's actual output.
+#=================================================================================
+param($SourceId,$ManagedEntityId,[string]$TargetSystem,[string]$StdOut,[string]$ReturnCode,[string]$StdErr)
+
+$ScriptName = "##CompanyID##.##AppName##.##UniqueID##.Class.Discovery.ps1"
+$EventID = "9000"
+$momapi = New-Object -comObject MOM.ScriptAPI
+
+function ConvertFrom-HexUtf8 {
+    param([string]$Value)
+    if ([string]::IsNullOrEmpty($Value) -or $Value.Length % 2 -ne 0 -or $Value -notmatch "^[0-9a-fA-F]+$") {
+        throw "Malformed hex-encoded discovery field: '$Value'"
+    }
+
+    [byte[]]$bytes = for ($index = 0; $index -lt $Value.Length; $index += 2) {
+        [Convert]::ToByte($Value.Substring($index, 2), 16)
+    }
+    return [Text.Encoding]::UTF8.GetString($bytes)
+}
+
+$lines = $StdOut -split "\`n" | Where-Object { $_.Trim().Length -gt 0 }
+$records = @()
+
+foreach ($line in $lines) {
+    $fields = $line.TrimEnd("\`r").Split("\`t")
+    if ($fields.Count -ne 4 -or
+        [string]::IsNullOrWhiteSpace($fields[0]) -or
+        [string]::IsNullOrWhiteSpace($fields[1]) -or
+        [string]::IsNullOrWhiteSpace($fields[2])) {
+        throw "Malformed discovery output row. Expected four tab-separated fields with hex-encoded name and path: '$line'"
+    }
+
+    $records += [PSCustomObject]@{
+        InstanceKey = ConvertFrom-HexUtf8 $fields[0].Trim()
+        Property2 = ConvertFrom-HexUtf8 $fields[1].Trim()
+        Property3 = $fields[2].Trim()
+        Property4 = $fields[3].Trim()
+    }
+}
+
+$DiscoveryData = $momapi.CreateDiscoveryData(0, $SourceId, $ManagedEntityId)
+foreach ($record in $records) {
+    $instance = $DiscoveryData.CreateClassInstance("$MPElement[Name='##CompanyID##.##AppName##.##UniqueID##.Class']$")
+    $instance.AddProperty("$MPElement[Name='MUL!Microsoft.Unix.Computer']/PrincipalName$", $TargetSystem)
+    $instance.AddProperty("$MPElement[Name='##CompanyID##.##AppName##.##UniqueID##.Class']/##KeyPropertyName##$", $record.InstanceKey)
+    $instance.AddProperty("$MPElement[Name='##CompanyID##.##AppName##.##UniqueID##.Class']/##Property2Name##$", $record.Property2)
+    $instance.AddProperty("$MPElement[Name='##CompanyID##.##AppName##.##UniqueID##.Class']/##Property3Name##$", $record.Property3)
+    $instance.AddProperty("$MPElement[Name='##CompanyID##.##AppName##.##UniqueID##.Class']/##Property4Name##$", $record.Property4)
+    $instance.AddProperty("$MPElement[Name='System!System.Entity']/DisplayName$", "$TargetSystem - $($record.InstanceKey)")
+    $DiscoveryData.AddInstance($instance)
+}
+
+$momapi.LogScriptEvent($ScriptName,$EventID,0,"Discovery complete for ($TargetSystem). Instances found: $($records.Count)")
+$DiscoveryData`,
+                    keyPropertyName: 'InstanceKey',
+                    property2Name: 'Property2',
+                    property3Name: 'Property3',
+                    property4Name: 'Property4'
+                })
+            },
+            'linux-nfs-discovery': {
+                name: 'NFS Mount Discovery (Linux)',
+                template: 'Class.And.Discovery.Linux.ShellScript.mpx',
+                fields: buildLinuxShellDiscoveryFields({
+                    uniqueId: 'NFSMount',
+                    shellCommand: '# Reads currently mounted NFS client filesystems from /proc/mounts.\n# Output format: tab-separated <MountPoint> <RemoteExport> <FileSystemType> <MountOptions>\n# Literal tabs cannot occur in /proc/mounts tokens because they are encoded as \\011.\nawk \'$3 == "nfs" || $3 == "nfs4" {printf "%s\\t%s\\t%s\\t%s\\n", $2, $1, $3, $4}\' /proc/mounts',
+                    parsingScript: `#=================================================================================
+#  NFS Mount Discovery - PowerShell parsing script
+#  Parses one tab-separated line per NFS mount from /proc/mounts:
+#    <MountPoint><TAB><RemoteExport><TAB><FileSystemType><TAB><MountOptions>
+#=================================================================================
+param($SourceId,$ManagedEntityId,[string]$TargetSystem,[string]$StdOut,[string]$ReturnCode,[string]$StdErr)
+
+$ScriptName = "##CompanyID##.##AppName##.##UniqueID##.Class.Discovery.ps1"
+$EventID = "9001"
+$momapi = New-Object -comObject MOM.ScriptAPI
+
+function ConvertFrom-ProcMountEncoding {
+    param([string]$Value)
+    if ($null -eq $Value) { return "" }
+
+    # /proc/mounts uses fstab-style octal escapes. Decode the escaped backslash last
+    # so a literal sequence such as "\\134040" does not become a space accidentally.
+    return $Value.Replace("\\040", " ").Replace("\\011", "\`t").Replace("\\012", "\`n").Replace("\\134", "\\")
+}
+
+$lines = $StdOut -split "\`n" | Where-Object { $_.Trim().Length -gt 0 }
+$records = @()
+
+foreach ($line in $lines) {
+    # Split before decoding /proc/mounts escapes. Literal tabs are encoded as "\\011"
+    # in each token, so a real tab is an unambiguous record-field delimiter.
+    $fields = $line.TrimEnd("\`r").Split("\`t")
+    if ($fields.Count -ne 4 -or
+        [string]::IsNullOrWhiteSpace($fields[0]) -or
+        [string]::IsNullOrWhiteSpace($fields[1]) -or
+        ($fields[2].Trim() -ne "nfs" -and $fields[2].Trim() -ne "nfs4")) {
+        throw "Malformed NFS discovery output row. Expected four tab-separated fields and filesystem type nfs or nfs4: '$line'"
+    }
+
+    $mountPoint   = ConvertFrom-ProcMountEncoding ($fields[0].Trim())
+    $remoteExport = ConvertFrom-ProcMountEncoding ($fields[1].Trim())
+    $fsType       = $fields[2].Trim()
+    $mountOptions = ConvertFrom-ProcMountEncoding ($fields[3].Trim())
+
+    $records += [PSCustomObject]@{
+        MountPoint = $mountPoint
+        RemoteExport = $remoteExport
+        FileSystemType = $fsType
+        MountOptions = $mountOptions
+    }
+}
+
+$DiscoveryData = $momapi.CreateDiscoveryData(0, $SourceId, $ManagedEntityId)
+foreach ($record in $records) {
+    $instance = $DiscoveryData.CreateClassInstance("$MPElement[Name='##CompanyID##.##AppName##.##UniqueID##.Class']$")
+    $instance.AddProperty("$MPElement[Name='MUL!Microsoft.Unix.Computer']/PrincipalName$", $TargetSystem)
+    $instance.AddProperty("$MPElement[Name='##CompanyID##.##AppName##.##UniqueID##.Class']/##KeyPropertyName##$", $record.MountPoint)
+    $instance.AddProperty("$MPElement[Name='##CompanyID##.##AppName##.##UniqueID##.Class']/##Property2Name##$", $record.RemoteExport)
+    $instance.AddProperty("$MPElement[Name='##CompanyID##.##AppName##.##UniqueID##.Class']/##Property3Name##$", $record.FileSystemType)
+    $instance.AddProperty("$MPElement[Name='##CompanyID##.##AppName##.##UniqueID##.Class']/##Property4Name##$", $record.MountOptions)
+    $instance.AddProperty("$MPElement[Name='System!System.Entity']/DisplayName$", "NFS Mount: $($record.MountPoint) ($($record.RemoteExport)) on $TargetSystem")
+    $DiscoveryData.AddInstance($instance)
+}
+
+$momapi.LogScriptEvent($ScriptName,$EventID,0,"NFS mount discovery complete for ($TargetSystem). Mounts found: $($records.Count)")
+$DiscoveryData`,
+                    keyPropertyName: 'MountPoint',
+                    property2Name: 'RemoteExport',
+                    property3Name: 'FileSystemType',
+                    property4Name: 'MountOptions'
+                })
+            },
             'script-discovery': {
                 name: 'Script Discovery',
                 template: 'Class.And.Discovery.Script.PowerShell.mpx',
                 fields: [
                     { id: 'scriptType', label: 'Script Type', type: 'select', options: ['PowerShell', 'VBScript'], value: 'PowerShell' },
-                    { id: 'scriptBody', label: 'Script Content', type: 'textarea', required: true, placeholder: 'param($SourceId,$ManagedEntityId,$ComputerName)\n\n# Load MOMScript API\n$momapi = New-Object -comObject MOM.ScriptAPI\n$DiscoveryData = $momapi.CreateDiscoveryData(0, $SourceId, $ManagedEntityId)\n\n# Your discovery logic here\n$Folder = "C:\\MyApp"\nIf (Test-Path $Folder) {\n    $instance = $DiscoveryData.CreateClassInstance("$MPElement[Name=\'##CompanyID##.##AppName##.##UniqueID##.Class\']$")\n    $instance.AddProperty("$MPElement[Name=\'Windows!Microsoft.Windows.Computer\']/PrincipalName$", $ComputerName)\n    $instance.AddProperty("$MPElement[Name=\'System!System.Entity\']/DisplayName$", $ComputerName)\n    $DiscoveryData.AddInstance($instance)\n}\n\n# Return Discovery Data\n$DiscoveryData' },
+                    { id: 'scriptBody', label: 'Script Content', type: 'textarea', required: true, preserveWhitespace: true, placeholder: 'param($SourceId,$ManagedEntityId,$ComputerName)\n\n# Load MOMScript API\n$momapi = New-Object -comObject MOM.ScriptAPI\n$DiscoveryData = $momapi.CreateDiscoveryData(0, $SourceId, $ManagedEntityId)\n\n# Your discovery logic here\n$Folder = "C:\\MyApp"\nIf (Test-Path $Folder) {\n    $instance = $DiscoveryData.CreateClassInstance("$MPElement[Name=\'##CompanyID##.##AppName##.##UniqueID##.Class\']$")\n    $instance.AddProperty("$MPElement[Name=\'Windows!Microsoft.Windows.Computer\']/PrincipalName$", $ComputerName)\n    $instance.AddProperty("$MPElement[Name=\'System!System.Entity\']/DisplayName$", $ComputerName)\n    $DiscoveryData.AddInstance($instance)\n}\n\n# Return Discovery Data\n$DiscoveryData' },
                     { id: 'targetClass', label: 'Target Class', type: 'select', options: ['Windows!Microsoft.Windows.Server.OperatingSystem', 'Windows!Microsoft.Windows.Computer'], value: 'Windows!Microsoft.Windows.Server.OperatingSystem' }
                 ]
             },
@@ -905,7 +1162,7 @@ $momapi.LogScriptEvent($ScriptName,$EventID,0,"\`n Script Completed. \`n Script 
                     { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'CheckWebSite' },
                     { id: 'intervalSeconds', label: 'Check Interval (seconds)', type: 'number', required: true, value: '3600', placeholder: '3600' },
                     { id: 'eventId', label: 'Event ID', type: 'number', required: true, value: '1234', placeholder: '1234', help: 'Event ID for script logging in Operations Manager event log' },
-                    { id: 'scriptBody', label: 'PowerShell Script', type: 'textarea', required: true, 
+                    { id: 'scriptBody', label: 'PowerShell Script', type: 'textarea', required: true, preserveWhitespace: true,
                       placeholder: '# Your monitoring script should set $bag values:\n# $bag.AddValue(\'Result\',\'GoodCondition\')  # for healthy\n# $bag.AddValue(\'Result\',\'BadCondition\')   # for unhealthy\n\nExample:\n$strCondition = "Good"  # or "Bad"\nif ($strCondition -eq "Good") {\n  $bag.AddValue(\'Result\',\'GoodCondition\')\n} else {\n  $bag.AddValue(\'Result\',\'BadCondition\')\n}',
                       help: 'Script must set $bag.AddValue(\'Result\', \'GoodCondition\') or $bag.AddValue(\'Result\', \'BadCondition\'). Note: $bag is automatically returned by the wrapper script - do NOT add "return $bag" in your code.' 
                     }
@@ -916,7 +1173,7 @@ $momapi.LogScriptEvent($ScriptName,$EventID,0,"\`n Script Completed. \`n Script 
                 template: 'Monitor.TimedScript.PowerShell.WithParams.mpx',
                 fields: [
                     { id: 'intervalSeconds', label: 'Check Interval (seconds)', type: 'number', required: true, value: '300' },
-                    { id: 'scriptBody', label: 'PowerShell Script', type: 'textarea', required: true, placeholder: 'param($Param1, $Param2)\n# Your script here' },
+                    { id: 'scriptBody', label: 'PowerShell Script', type: 'textarea', required: true, preserveWhitespace: true, placeholder: 'param($Param1, $Param2)\n# Your script here' },
                     { id: 'param1', label: 'Parameter 1', type: 'text', required: false, placeholder: 'Value for $Param1' },
                     { id: 'param2', label: 'Parameter 2', type: 'text', required: false, placeholder: 'Value for $Param2' }
                 ]
@@ -1033,7 +1290,7 @@ $PropertyBag</ScriptBody>
                     { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'CheckApplication' },
                     { id: 'intervalSeconds', label: 'Run Every (seconds)', type: 'number', required: true, value: '300', placeholder: '300', help: 'How often to run the PowerShell script (in seconds). Example: 300 = 5 minutes, 600 = 10 minutes, 3600 = 1 hour' },
                     { id: 'eventId', label: 'Event ID', type: 'number', required: true, value: '1234', placeholder: '1234', help: 'Event ID for script logging in Operations Manager event log' },
-                    { id: 'scriptBody', label: 'PowerShell Script', type: 'textarea', required: true, 
+                    { id: 'scriptBody', label: 'PowerShell Script', type: 'textarea', required: true, preserveWhitespace: true,
                       placeholder: ' $status=if(Get-Process -Name notepad -ErrorAction SilentlyContinue) { 1 } else {0} \n\nif($status -eq 0) {\n  $PropertyBag.AddValue("State","Bad")\n}\nelseif($status -eq "Warning") {\n  $PropertyBag.AddValue("State","Warning")\n}\nelse\n{\n  $PropertyBag.AddValue("State","Ok")\n}',
                       value: ' $status=if(Get-Process -Name notepad -ErrorAction SilentlyContinue) { 1 } else {0} \n\nif($status -eq 0) {\n  $PropertyBag.AddValue("State","Bad")\n}\nelseif($status -eq "Warning") {\n  $PropertyBag.AddValue("State","Warning")\n}\nelse\n{\n  $PropertyBag.AddValue("State","Ok")\n}',
                       help: 'IMPORTANT: Your script MUST use $PropertyBag.AddValue("State", "Ok|Warning|Bad"). Do NOT change the variable name "State" or "PropertyBag" - they are required for the monitor to work correctly. The script wrapper automatically creates $PropertyBag and returns it.' 
@@ -1123,7 +1380,7 @@ $PropertyBag</ScriptBody>
                 fields: [
                     { id: 'uniqueId', label: 'Unique ID', type: 'text', required: true, placeholder: 'CustomScriptAlert' },
                     { id: 'intervalSeconds', label: 'Run Every (seconds)', type: 'number', required: true, value: '300', placeholder: '300' },
-                    { id: 'scriptBody', label: 'PowerShell Script', type: 'textarea', required: true, 
+                    { id: 'scriptBody', label: 'PowerShell Script', type: 'textarea', required: true, preserveWhitespace: true,
                       placeholder: '# Your custom PowerShell script here\n# Return $true to generate alert, $false otherwise\n$result = Test-Path "C:\\MyApp\\critical.txt"\nreturn $result',
                       help: 'Script should return $true to generate an alert' }
                 ]
@@ -1161,7 +1418,7 @@ $PropertyBag</ScriptBody>
             if (componentCard && !e.target.closest('.component-checkbox')) {
                 // Only toggle if not clicking directly on the checkbox label
                 const checkbox = componentCard.querySelector('input[type="checkbox"]');
-                if (checkbox) {
+                if (checkbox && !checkbox.disabled) {
                     checkbox.checked = !checkbox.checked;
                     // Trigger the change event
                     checkbox.dispatchEvent(new Event('change', { bubbles: true }));
@@ -1514,6 +1771,74 @@ $PropertyBag</ScriptBody>
                 nextBtn.disabled = false;
             }
         }
+
+        this.updateLinuxCompatibilityUI();
+    }
+
+    updateLinuxCompatibilityUI() {
+        const linuxSelected = this.isLinuxDiscoveryType(this.mpData.selectedComponents.discovery);
+        const restrictedSteps = [
+            {
+                id: 'step-3',
+                isCompatible: () => false,
+                message: 'All current monitors use Windows-only modules or Windows host properties and cannot target Linux-discovered objects.'
+            },
+            {
+                id: 'step-4',
+                isCompatible: type => type === 'snmp-alert',
+                message: 'Windows event log, performance, and PowerShell rules cannot target Linux-discovered objects. The independent SNMP trap rule remains available.'
+            }
+        ];
+
+        if (linuxSelected) {
+            this.mpData.selectedComponents.monitors = [];
+            this.mpData.selectedComponents.rules = (this.mpData.selectedComponents.rules || [])
+                .filter(type => type === 'snmp-alert');
+            this.mpData.selectedComponents.tasks = [];
+            this.instanceCounters = {};
+        }
+
+        restrictedSteps.forEach(({ id, isCompatible, message }) => {
+            const step = document.getElementById(id);
+            if (!step) return;
+
+            const bannerId = `${id}-linux-compatibility`;
+            let banner = document.getElementById(bannerId);
+            if (linuxSelected && !banner) {
+                banner = document.createElement('div');
+                banner.id = bannerId;
+                banner.className = 'compatibility-notice';
+                banner.innerHTML = `<strong>Linux discovery selected:</strong> ${message}`;
+                const description = step.querySelector('.step-description');
+                if (description) description.insertAdjacentElement('afterend', banner);
+            } else if (!linuxSelected && banner) {
+                banner.remove();
+            }
+
+            step.querySelectorAll('.component-card').forEach(card => {
+                const checkbox = card.querySelector('input[type="checkbox"]');
+                if (!checkbox) return;
+
+                const disabled = linuxSelected && !isCompatible(checkbox.value);
+                checkbox.disabled = disabled;
+                checkbox.checked = disabled ? false : checkbox.checked;
+                card.classList.toggle('component-card--disabled', disabled);
+                card.setAttribute('aria-disabled', disabled ? 'true' : 'false');
+                if (disabled) {
+                    card.classList.remove('selected');
+                    card.querySelector('.btn-container')?.remove();
+                }
+            });
+        });
+
+        // No task choices are currently exposed, but keep future task cards safe by
+        // applying the same rule if they are added to the wizard later.
+        document.querySelectorAll('#step-5 .component-card input[type="checkbox"]').forEach(checkbox => {
+            if (!checkbox.value.includes('task')) return;
+            checkbox.disabled = linuxSelected;
+            if (linuxSelected) checkbox.checked = false;
+            checkbox.closest('.component-card')?.classList.toggle('component-card--disabled', linuxSelected);
+        });
     }
 
     handleStepNavigation(stepElement) {
@@ -1580,6 +1905,11 @@ $PropertyBag</ScriptBody>
     handleComponentSelection(checkbox) {
         const componentType = checkbox.value;
         const card = checkbox.closest('.component-card');
+
+        if (checkbox.disabled) {
+            checkbox.checked = false;
+            return;
+        }
         
         // Find the step by checking which step contains this checkbox
         const step = checkbox.closest('.form-step');
@@ -1823,6 +2153,21 @@ $PropertyBag</ScriptBody>
                 return false;
             }
         }
+
+        if (field.id && field.id.endsWith('-uniqueId')) {
+            if (value && !this.isValidScomElementIdentifier(value)) {
+                this.showFieldError(formGroup, 'Must start with a letter or underscore and contain only letters, numbers, and underscores');
+                return false;
+            }
+        }
+
+        const isLinuxScheduleField = field.id &&
+            (field.id.startsWith('linux-shell-script-discovery-') || field.id.startsWith('linux-nfs-discovery-')) &&
+            (field.id.endsWith('-intervalSeconds') || field.id.endsWith('-timeoutSeconds'));
+        if (isLinuxScheduleField && value && !this.isPositiveInteger(value)) {
+            this.showFieldError(formGroup, 'Must be a whole number from 1 through 2147483647');
+            return false;
+        }
         
         if (field.id && field.id.includes('-regKeyPath')) {
             if (value && !/^[A-Z]+\\[A-Za-z0-9\\_.]+$/.test(value)) {
@@ -1995,15 +2340,21 @@ $PropertyBag</ScriptBody>
         // Automatically generate and display the XML preview
         this.saveBasicInfo();
         this.saveConfigurationData();
-        const xmlContent = this.generateMPXML();
         // Show output without scrolling (auto mode)
         const outputArea = document.getElementById('output-area');
         if (!outputArea) return;
         
         const outputCode = outputArea.querySelector('#mp-output code');
-        
-        if (outputCode) {
-            outputCode.textContent = xmlContent;
+
+        try {
+            const xmlContent = this.generateMPXML();
+            if (outputCode) {
+                outputCode.textContent = xmlContent;
+            }
+        } catch (error) {
+            if (outputCode) {
+                outputCode.textContent = `<!-- Cannot generate Management Pack: ${error.message} -->`;
+            }
         }
         if (outputArea) {
             outputArea.style.display = 'block';
@@ -2161,40 +2512,59 @@ $PropertyBag</ScriptBody>
         return fields.map(field => {
             const fieldId = `${componentType}-${field.id}`;
             const required = field.required ? 'required' : '';
+            const htmlAttribute = value => this.escapeXml(String(value ?? ''));
+            const htmlText = value => this.escapeXml(String(value ?? ''));
+            const htmlTextareaText = value => {
+                const raw = String(value ?? '');
+                const encoded = htmlText(raw)
+                    .replace(/\r/g, '&#13;')
+                    .replace(/\n/g, '&#10;');
+                // HTML parsers remove one leading newline from textarea content.
+                return raw.startsWith('\n') ? `&#10;${encoded}` : encoded;
+            };
+            const constraints = [
+                field.min !== undefined ? `min="${field.min}"` : '',
+                field.max !== undefined ? `max="${field.max}"` : '',
+                field.step !== undefined ? `step="${field.step}"` : '',
+                field.pattern ? `pattern="${htmlAttribute(field.pattern)}"` : ''
+            ].filter(Boolean).join(' ');
             
             // Check if there's saved configuration data for this field
             const savedConfig = this.mpData.configurations[componentType] || {};
             const savedValue = savedConfig[field.id];
             const value = savedValue !== undefined ? savedValue : (field.value || '');
             const placeholder = field.placeholder || '';
+            const safeFieldId = htmlAttribute(fieldId);
+            const safePlaceholder = htmlAttribute(placeholder);
+            const safeValue = htmlAttribute(value);
             
             let input;
             switch (field.type) {
                 case 'select':
                     const options = field.options.map(opt => {
-                        const selected = (value && opt === value) ? 'selected' : '';
-                        return `<option value="${opt}" ${selected}>${opt}</option>`;
+                        const selected = opt === value ? 'selected' : '';
+                        return `<option value="${htmlAttribute(opt)}" ${selected}>${htmlText(opt)}</option>`;
                     }).join('');
                     
                     const defaultOption = value ? '' : '<option value="">Select...</option>';
-                    input = `<select id="${fieldId}" ${required}>${defaultOption}${options}</select>`;
+                    input = `<select id="${safeFieldId}" ${required}>${defaultOption}${options}</select>`;
                     break;
                 case 'textarea':
-                    input = `<textarea id="${fieldId}" placeholder="${placeholder}" ${required}>${value}</textarea>`;
+                    input = `<textarea id="${safeFieldId}" placeholder="${safePlaceholder}" ${required}>${htmlTextareaText(value)}</textarea>`;
                     break;
                 case 'number':
-                    input = `<input type="number" id="${fieldId}" placeholder="${placeholder}" value="${value}" ${required}>`;
+                    input = `<input type="number" id="${safeFieldId}" placeholder="${safePlaceholder}" value="${safeValue}" ${required} ${constraints}>`;
                     break;
                 default:
-                    input = `<input type="text" id="${fieldId}" placeholder="${placeholder}" value="${value}" ${required}>`;
+                    input = `<input type="text" id="${safeFieldId}" placeholder="${safePlaceholder}" value="${safeValue}" ${required} ${constraints}>`;
             }
             
-            const helpText = field.help ? `<small>${field.help}</small>` : '';
+            const helpText = field.help ? `<small>${htmlText(field.help)}</small>` : '';
             const fullWidthClass = field.type === 'textarea' ? ' form-group--full-width' : '';
             
             return `
                 <div class="form-group${fullWidthClass}">
-                    <label for="${fieldId}">${field.label}${field.required ? ' *' : ''}</label>
+                    <label for="${safeFieldId}">${htmlText(field.label)}${field.required ? ' *' : ''}</label>
                     ${input}
                     ${helpText}
                 </div>
@@ -2224,6 +2594,17 @@ $PropertyBag</ScriptBody>
                 description: descriptionField ? descriptionField.value.trim() : ''
             };
         }
+    }
+
+    getConfigurationField(componentType, fieldName) {
+        let fragment = this.fragmentLibrary[componentType];
+        if (!fragment) {
+            const monitor = this.mpData.selectedComponents.monitors?.find(
+                candidate => candidate.instanceId === componentType
+            );
+            fragment = monitor ? this.fragmentLibrary[monitor.type] : null;
+        }
+        return fragment?.fields?.find(field => field.id === fieldName) || null;
     }
 
     generatePreviewStructure() {
@@ -2306,7 +2687,6 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
         
         allConfigInputs.forEach(input => {
             const id = input.id;
-            const value = input.value.trim();
             
             if (id) {
                 // Parse the component type and field from the ID
@@ -2350,7 +2730,12 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
                         this.mpData.configurations[componentType] = {};
                     }
                     
-                    // Save the value even if it's empty (might be intentional)
+                    const rawValue = input.value;
+                    const field = this.getConfigurationField(componentType, fieldName);
+                    const value = field?.preserveWhitespace ? rawValue : rawValue.trim();
+
+                    // Only explicitly script-bearing fields retain exact whitespace.
+                    // Required-field validation uses a trimmed copy without mutation.
                     this.mpData.configurations[componentType][fieldName] = value;
                     
                     // Debug logging for script-discovery
@@ -2363,6 +2748,7 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
     }
 
     generateMPXML() {
+        this.assertComponentCompatibility();
         const { companyId, appName, version, description } = this.mpData.basicInfo;
         const mpId = `${companyId}.${appName}`;
         
@@ -2375,7 +2761,303 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
         return this.generateNewMPXML();
     }
 
+    getDirectChild(parent, name) {
+        return [...parent.children].find(child => child.tagName === name) || null;
+    }
+
+    insertSchemaOrdered(parent, child, order) {
+        const childIndex = order.indexOf(child.tagName);
+        const laterSibling = [...parent.children].find(sibling => {
+            const siblingIndex = order.indexOf(sibling.tagName);
+            return siblingIndex !== -1 && siblingIndex > childIndex;
+        });
+        parent.insertBefore(child, laterSibling || null);
+        return child;
+    }
+
+    ensureSchemaContainer(parent, name, order, xmlDoc) {
+        return this.getDirectChild(parent, name) ||
+            this.insertSchemaOrdered(parent, xmlDoc.createElement(name), order);
+    }
+
+    normalizeXmlStructure(node) {
+        if (node.nodeType === 1) {
+            const attributes = [...node.attributes]
+                .filter(attribute => attribute.name !== 'xmlns' && !attribute.name.startsWith('xmlns:'))
+                .map(attribute => [attribute.name, attribute.value])
+                .sort(([left], [right]) => left.localeCompare(right))
+                .map(([name, value]) => `${name}=${JSON.stringify(value)}`)
+                .join('|');
+            const children = [...node.childNodes]
+                .filter(child => child.nodeType === 1 ||
+                    ((child.nodeType === 3 || child.nodeType === 4) && child.nodeValue.trim() !== ''))
+                .map(child => this.normalizeXmlStructure(child))
+                .join('');
+            return `<${node.tagName}|${attributes}>${children}</${node.tagName}>`;
+        }
+        return JSON.stringify(node.nodeValue);
+    }
+
+    getManagementPackElementLocation(node) {
+        const path = [];
+        for (let current = node.parentElement; current && current.tagName !== 'ManagementPack'; current = current.parentElement) {
+            path.unshift(current.tagName);
+        }
+        return path.join('/');
+    }
+
+    getGlobalIdContainers() {
+        return new Set([
+            'ClassTypes',
+            'RelationshipTypes',
+            'EnumerationTypes',
+            'TypeProjections',
+            'ModuleTypes',
+            'MonitorTypes',
+            'Templates',
+            'SecureReferences',
+            'Discoveries',
+            'Rules',
+            'Monitors',
+            'Diagnostics',
+            'Recoveries',
+            'Tasks',
+            'Overrides',
+            'Categories',
+            'Views',
+            'Folders',
+            'FolderItems',
+            'StringResources',
+            'ConsoleTasks',
+            'ImageReferences',
+            'ComponentTypes',
+            'ComponentImplementations',
+            'Pages',
+            'PageLayouts',
+            'Dashboards',
+            'Reports',
+            'ReportDefinitions',
+            'LinkedReports',
+            'DataWarehouseDataSets',
+            'DataWarehouseScripts',
+            'Resources'
+        ]);
+    }
+
+    buildGlobalElementIdRegistry(xmlDoc, context = 'Imported Management Pack') {
+        const globalIdContainers = this.getGlobalIdContainers();
+        const registry = new Map();
+
+        for (const element of xmlDoc.querySelectorAll('[ID]')) {
+            if (!globalIdContainers.has(element.parentElement?.tagName)) continue;
+            const id = element.getAttribute('ID');
+            const entry = {
+                node: element,
+                type: element.tagName,
+                location: this.getManagementPackElementLocation(element)
+            };
+            const existing = registry.get(id);
+            if (existing) {
+                const sameSemanticElement = existing.type === entry.type &&
+                    existing.location === entry.location;
+                if (sameSemanticElement &&
+                    this.normalizeXmlStructure(existing.node) === this.normalizeXmlStructure(element)) {
+                    element.remove();
+                    continue;
+                }
+                throw new Error(
+                    `${context} contains conflicting global element identifier "${id}" as ` +
+                    `${existing.type} at ${existing.location} and ${entry.type} at ${entry.location}.`
+                );
+            }
+            registry.set(id, entry);
+        }
+
+        return registry;
+    }
+
+    validateGeneratedFragments(fragments) {
+        const globalIdContainers = this.getGlobalIdContainers();
+        const globalIds = new Map();
+        const displayStrings = new Map();
+
+        for (const fragment of fragments) {
+            const xml = typeof fragment === 'string' ? fragment : fragment.xml;
+            const component = typeof fragment === 'string' ? 'unknown component' : fragment.component;
+            const doc = new DOMParser().parseFromString(xml, 'text/xml');
+            const parserError = doc.querySelector('parsererror');
+            if (parserError) {
+                throw new Error(`Generated component "${component}" produced invalid XML: ${parserError.textContent}`);
+            }
+
+            for (const element of doc.querySelectorAll('[ID]')) {
+                if (!globalIdContainers.has(element.parentElement?.tagName)) continue;
+                const id = element.getAttribute('ID');
+                const entry = {
+                    component,
+                    node: element,
+                    type: element.tagName,
+                    location: this.getManagementPackElementLocation(element)
+                };
+                const existing = globalIds.get(id);
+                if (!existing) {
+                    globalIds.set(id, entry);
+                    continue;
+                }
+
+                const equivalent = existing.type === entry.type &&
+                    existing.location === entry.location &&
+                    this.normalizeXmlStructure(existing.node) === this.normalizeXmlStructure(element);
+                if (!equivalent) {
+                    throw new Error(
+                        `Generated components "${existing.component}" and "${component}" conflict on global ` +
+                        `element identifier "${id}" (${existing.type} at ${existing.location} versus ` +
+                        `${entry.type} at ${entry.location}). Choose different Unique IDs.`
+                    );
+                }
+            }
+
+            for (const displayString of doc.querySelectorAll('LanguagePack > DisplayStrings > DisplayString')) {
+                const language = displayString.closest('LanguagePack')?.getAttribute('ID') || '';
+                const elementId = displayString.getAttribute('ElementID') || '';
+                const subElementId = displayString.getAttribute('SubElementID') || '';
+                const key = `${language}|${elementId}|${subElementId}`;
+                const existing = displayStrings.get(key);
+                if (!existing) {
+                    displayStrings.set(key, { component, node: displayString });
+                    continue;
+                }
+                if (this.normalizeXmlStructure(existing.node) !== this.normalizeXmlStructure(displayString)) {
+                    const identity = subElementId ? `${elementId}/${subElementId}` : elementId;
+                    throw new Error(
+                        `Generated components "${existing.component}" and "${component}" conflict on ` +
+                        `display string "${identity}" in language "${language}".`
+                    );
+                }
+            }
+        }
+    }
+
+    deduplicateDisplayStrings(xmlDoc, context = 'Generated Management Pack') {
+        for (const languagePack of xmlDoc.querySelectorAll('LanguagePacks > LanguagePack')) {
+            const seen = new Map();
+            for (const displayString of languagePack.querySelectorAll(':scope > DisplayStrings > DisplayString')) {
+                const elementId = displayString.getAttribute('ElementID') || '';
+                const subElementId = displayString.getAttribute('SubElementID') || '';
+                const key = `${elementId}|${subElementId}`;
+                const existing = seen.get(key);
+                if (!existing) {
+                    seen.set(key, displayString);
+                    continue;
+                }
+                if (this.normalizeXmlStructure(existing) === this.normalizeXmlStructure(displayString)) {
+                    displayString.remove();
+                    continue;
+                }
+                const identity = subElementId ? `${elementId}/${subElementId}` : elementId;
+                throw new Error(`${context} contains conflicting display string "${identity}".`);
+            }
+        }
+    }
+
+    finalizeGeneratedManagementPack(xml) {
+        const doc = new DOMParser().parseFromString(xml, 'text/xml');
+        const parserError = doc.querySelector('parsererror');
+        if (parserError) {
+            throw new Error(`Generated Management Pack XML is invalid: ${parserError.textContent}`);
+        }
+        this.buildGlobalElementIdRegistry(doc, 'Generated Management Pack');
+        this.deduplicateDisplayStrings(doc);
+        return new XMLSerializer().serializeToString(doc);
+    }
+
+    mergeGeneratedElement(target, node, xmlDoc, globalIdRegistry, label, elementOrder = null) {
+        const id = node.getAttribute('ID');
+        if (!id) throw new Error(`Generated ${label} is missing its required ID.`);
+
+        const type = node.tagName;
+        const location = [this.getManagementPackElementLocation(target), target.tagName]
+            .filter(Boolean)
+            .join('/');
+        const existing = globalIdRegistry.get(id);
+        if (!existing) {
+            const importedNode = xmlDoc.importNode(node, true);
+            if (elementOrder) {
+                this.insertSchemaOrdered(target, importedNode, elementOrder);
+            } else {
+                target.appendChild(importedNode);
+            }
+            globalIdRegistry.set(id, { node: importedNode, type, location });
+            return;
+        }
+
+        const sameSemanticElement = existing.type === type && existing.location === location;
+        if (sameSemanticElement &&
+            this.normalizeXmlStructure(existing.node) === this.normalizeXmlStructure(node)) {
+            return;
+        }
+
+        if (sameSemanticElement) {
+            throw new Error(
+                `Imported Management Pack already contains a different ${label} with identifier "${id}". Choose a different Class / Discovery Unique ID.`
+            );
+        }
+
+        throw new Error(
+            `Management Pack global element identifier "${id}" is already used by ` +
+            `${existing.type} at ${existing.location} and cannot be reused by ${type} at ${location}. ` +
+            'Choose a different Class / Discovery Unique ID.'
+        );
+    }
+
+    mergeDisplayString(target, node, xmlDoc) {
+        const elementId = node.getAttribute('ElementID') || '';
+        const subElementId = node.getAttribute('SubElementID') || '';
+        const existing = [...target.children].find(child =>
+            child.getAttribute('ElementID') === elementId &&
+            (child.getAttribute('SubElementID') || '') === subElementId
+        );
+        if (!existing) {
+            target.appendChild(xmlDoc.importNode(node, true));
+            return;
+        }
+        if (this.normalizeXmlStructure(existing) !== this.normalizeXmlStructure(node)) {
+            const identity = subElementId ? `${elementId}/${subElementId}` : elementId;
+            throw new Error(
+                `Imported Management Pack already contains a different display string with identifier "${identity}".`
+            );
+        }
+    }
+
+    ensureSingleDefaultLanguagePack(languagePacksSection, xmlDoc) {
+        const languagePacks = [...languagePacksSection.children]
+            .filter(child => child.tagName === 'LanguagePack');
+        let enu = languagePacks.find(languagePack => languagePack.getAttribute('ID') === 'ENU');
+        const defaults = languagePacks.filter(languagePack =>
+            ['true', '1'].includes(languagePack.getAttribute('IsDefault')?.toLowerCase())
+        );
+
+        if (defaults.length > 1) {
+            defaults.slice(1).forEach(languagePack => languagePack.setAttribute('IsDefault', 'false'));
+        }
+
+        const preservedDefault = defaults[0] || null;
+        if (!enu) {
+            enu = xmlDoc.createElement('LanguagePack');
+            enu.setAttribute('ID', 'ENU');
+            enu.setAttribute('IsDefault', preservedDefault ? 'false' : 'true');
+            languagePacksSection.appendChild(enu);
+        } else if (!preservedDefault) {
+            // Deterministic fallback: generated strings target ENU, so ENU becomes the
+            // sole default only when the imported MP did not designate any default.
+            enu.setAttribute('IsDefault', 'true');
+        }
+
+        return enu;
+    }
+
     mergeIntoImportedMP() {
+        this.assertComponentCompatibility();
         const xmlDoc = this.mpData.importedMP.xmlDoc.cloneNode(true);
         
         // Increment the version number
@@ -2393,6 +3075,19 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
         
         // Process new fragments to add
         let newFragments = [];
+
+        // Add the selected discovery before monitors/rules so imported MPs receive the
+        // same class, module types, discovery, and display strings as newly generated MPs.
+        const discoveryType = this.mpData.selectedComponents.discovery;
+        if (discoveryType && discoveryType !== 'skip') {
+            const fragment = this.fragmentLibrary[discoveryType];
+            if (fragment && fragment.template) {
+                const processedFragment = this.processFragmentTemplate(discoveryType, fragment.template);
+                if (processedFragment && processedFragment.trim().length > 0) {
+                    newFragments.push({ xml: processedFragment, component: fragment.name || discoveryType });
+                }
+            }
+        }
         
         // Add monitor fragments
         if (this.mpData.selectedComponents.monitors && this.mpData.selectedComponents.monitors.length > 0) {
@@ -2403,7 +3098,10 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
                 if (fragment && fragment.template) {
                     const processedFragment = this.processFragmentTemplate(instanceId, fragment.template, monitorType);
                     if (processedFragment && processedFragment.trim().length > 0) {
-                        newFragments.push(processedFragment);
+                        newFragments.push({
+                            xml: processedFragment,
+                            component: `${fragment.name || monitorType} (${instanceId})`
+                        });
                     }
                 }
             });
@@ -2416,35 +3114,95 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
                 if (fragment && fragment.template) {
                     const processedFragment = this.processFragmentTemplate(ruleType, fragment.template);
                     if (processedFragment && processedFragment.trim().length > 0) {
-                        newFragments.push(processedFragment);
+                        newFragments.push({ xml: processedFragment, component: fragment.name || ruleType });
                     }
                 }
             });
         }
         
         if (newFragments.length === 0) {
-            // No new content to add, return original
+            // Preserve the existing dependency aliases when no generated content needs
+            // to be merged. The version increment above remains the import workflow's
+            // only intentional change.
             return new XMLSerializer().serializeToString(xmlDoc);
         }
         
         // Parse new fragments and merge into xmlDoc
+        this.validateGeneratedFragments(newFragments);
+        this.mergeRequiredReferences(xmlDoc, newFragments);
         const { typeDefinitions, monitoring, presentation, languagePacks } = this.extractAndCombineSections(newFragments);
+        const root = xmlDoc.querySelector('ManagementPack');
+        if (!root) throw new Error('Imported Management Pack is missing its ManagementPack root element.');
+        // Authoritative sequence from the Operations Manager SDK's embedded
+        // Management Pack v2 XSD (Microsoft.EnterpriseManagement.Core).
+        const rootOrder = [
+            'Manifest',
+            'TypeDefinitions',
+            'Categories',
+            'Monitoring',
+            'ConfigurationGroups',
+            'Templates',
+            'PresentationTypes',
+            'Presentation',
+            'Warehouse',
+            'Reporting',
+            'LanguagePacks',
+            'Resources',
+            'Extensions'
+        ];
+        const typeDefinitionsOrder = [
+            'EntityTypes',
+            'DataTypes',
+            'SchemaTypes',
+            'SecureReferences',
+            'ModuleTypes',
+            'MonitorTypes',
+            'Extensions'
+        ];
+        const entityTypesOrder = ['ClassTypes', 'RelationshipTypes', 'EnumerationTypes', 'TypeProjections'];
+        const monitoringOrder = [
+            'Discoveries',
+            'Rules',
+            'Tasks',
+            'Monitors',
+            'Diagnostics',
+            'Recoveries',
+            'Overrides',
+            'ServiceLevelObjectives',
+            'Extensions'
+        ];
+        const presentationOrder = [
+            'Forms',
+            'ConsoleTasks',
+            'Views',
+            'Folders',
+            'FolderItems',
+            'ImageReferences',
+            'StringResources',
+            'ComponentTypes',
+            'ComponentReferences',
+            'ComponentOverrides',
+            'ComponentImplementations',
+            'ComponentBehaviors',
+            'BehaviorTypes',
+            'BehaviorImplementations',
+            'Extensions'
+        ];
+        const languagePackOrder = ['DisplayStrings', 'KnowledgeArticles'];
+        const moduleTypesElementOrder = [
+            'DataSourceModuleType',
+            'ProbeActionModuleType',
+            'ConditionDetectionModuleType',
+            'WriteActionModuleType'
+        ];
+        const monitorsElementOrder = ['AggregateMonitor', 'UnitMonitor', 'DependencyMonitor'];
+        const globalIdRegistry = this.buildGlobalElementIdRegistry(xmlDoc);
         
         // Add TypeDefinitions in proper order: EntityTypes, ModuleTypes, MonitorTypes
         if (typeDefinitions) {
             const tempDoc = new DOMParser().parseFromString(`<TypeDefinitions>${typeDefinitions}</TypeDefinitions>`, 'text/xml');
             
-            // Get or create TypeDefinitions section
-            let typeDefsSection = xmlDoc.querySelector('TypeDefinitions');
-            if (!typeDefsSection) {
-                typeDefsSection = xmlDoc.createElement('TypeDefinitions');
-                const manifest = xmlDoc.querySelector('Manifest');
-                if (manifest && manifest.nextSibling) {
-                    manifest.parentNode.insertBefore(typeDefsSection, manifest.nextSibling);
-                } else {
-                    xmlDoc.querySelector('ManagementPack').appendChild(typeDefsSection);
-                }
-            }
+            const typeDefsSection = this.ensureSchemaContainer(root, 'TypeDefinitions', rootOrder, xmlDoc);
             
             // Check what sections currently exist
             let entityTypesSection = typeDefsSection.querySelector('EntityTypes');
@@ -2454,76 +3212,42 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
             // Add ClassTypes (inside EntityTypes) - should come first
             const newClassTypes = tempDoc.querySelectorAll('EntityTypes > ClassTypes > *');
             if (newClassTypes.length > 0) {
-                if (!entityTypesSection) {
-                    entityTypesSection = xmlDoc.createElement('EntityTypes');
-                    // Insert at the beginning
-                    if (typeDefsSection.firstChild) {
-                        typeDefsSection.insertBefore(entityTypesSection, typeDefsSection.firstChild);
-                    } else {
-                        typeDefsSection.appendChild(entityTypesSection);
-                    }
-                }
-                let classTypesSection = entityTypesSection.querySelector('ClassTypes');
-                if (!classTypesSection) {
-                    classTypesSection = xmlDoc.createElement('ClassTypes');
-                    entityTypesSection.appendChild(classTypesSection);
-                }
+                entityTypesSection = this.ensureSchemaContainer(typeDefsSection, 'EntityTypes', typeDefinitionsOrder, xmlDoc);
+                const classTypesSection = this.ensureSchemaContainer(entityTypesSection, 'ClassTypes', entityTypesOrder, xmlDoc);
                 newClassTypes.forEach(classType => {
-                    classTypesSection.appendChild(xmlDoc.importNode(classType, true));
+                    this.mergeGeneratedElement(classTypesSection, classType, xmlDoc, globalIdRegistry, 'class type');
                 });
             }
             
             // Add ModuleTypes - should come after EntityTypes, before MonitorTypes
             const newModuleTypes = tempDoc.querySelectorAll('ModuleTypes > *');
             if (newModuleTypes.length > 0) {
-                if (!moduleTypesSection) {
-                    moduleTypesSection = xmlDoc.createElement('ModuleTypes');
-                    // Re-query to get updated positions
-                    entityTypesSection = typeDefsSection.querySelector('EntityTypes');
-                    monitorTypesSection = typeDefsSection.querySelector('MonitorTypes');
-                    
-                    if (monitorTypesSection) {
-                        // Insert before MonitorTypes
-                        typeDefsSection.insertBefore(moduleTypesSection, monitorTypesSection);
-                    } else if (entityTypesSection) {
-                        // Insert after EntityTypes
-                        if (entityTypesSection.nextSibling) {
-                            typeDefsSection.insertBefore(moduleTypesSection, entityTypesSection.nextSibling);
-                        } else {
-                            typeDefsSection.appendChild(moduleTypesSection);
-                        }
-                    } else {
-                        typeDefsSection.appendChild(moduleTypesSection);
-                    }
-                }
+                moduleTypesSection = this.ensureSchemaContainer(typeDefsSection, 'ModuleTypes', typeDefinitionsOrder, xmlDoc);
                 newModuleTypes.forEach(modType => {
-                    moduleTypesSection.appendChild(xmlDoc.importNode(modType, true));
+                    this.mergeGeneratedElement(
+                        moduleTypesSection,
+                        modType,
+                        xmlDoc,
+                        globalIdRegistry,
+                        'module type',
+                        moduleTypesElementOrder
+                    );
                 });
             }
             
             // Add MonitorTypes - should come last
             const newMonitorTypes = tempDoc.querySelectorAll('MonitorTypes > *');
             if (newMonitorTypes.length > 0) {
-                if (!monitorTypesSection) {
-                    monitorTypesSection = xmlDoc.createElement('MonitorTypes');
-                    // Always append at end
-                    typeDefsSection.appendChild(monitorTypesSection);
-                }
+                monitorTypesSection = this.ensureSchemaContainer(typeDefsSection, 'MonitorTypes', typeDefinitionsOrder, xmlDoc);
                 newMonitorTypes.forEach(monType => {
-                    monitorTypesSection.appendChild(xmlDoc.importNode(monType, true));
+                    this.mergeGeneratedElement(monitorTypesSection, monType, xmlDoc, globalIdRegistry, 'monitor type');
                 });
             }
         }
         
-        // Get or create Monitoring section
-        let monitoringSection = xmlDoc.querySelector('Monitoring');
-        if (!monitoringSection) {
-            monitoringSection = xmlDoc.createElement('Monitoring');
-            const root = xmlDoc.querySelector('ManagementPack');
-            root.appendChild(monitoringSection);
-        }
+        const monitoringSection = this.ensureSchemaContainer(root, 'Monitoring', rootOrder, xmlDoc);
         
-        // Add new monitoring content in proper order: Discoveries, Monitors, Rules
+        // Add new monitoring content in schema order: Discoveries, Rules, Monitors.
         if (monitoring) {
             const tempDoc = new DOMParser().parseFromString(`<Monitoring>${monitoring}</Monitoring>`, 'text/xml');
             
@@ -2535,58 +3259,34 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
             // Add Discoveries (for fragments that include class + discovery)
             const newDiscoveries = tempDoc.querySelectorAll('Discoveries > *');
             if (newDiscoveries.length > 0) {
-                if (!discoveriesSection) {
-                    discoveriesSection = xmlDoc.createElement('Discoveries');
-                    // Insert at the beginning
-                    if (monitoringSection.firstChild) {
-                        monitoringSection.insertBefore(discoveriesSection, monitoringSection.firstChild);
-                    } else {
-                        monitoringSection.appendChild(discoveriesSection);
-                    }
-                }
+                discoveriesSection = this.ensureSchemaContainer(monitoringSection, 'Discoveries', monitoringOrder, xmlDoc);
                 newDiscoveries.forEach(discovery => {
-                    discoveriesSection.appendChild(xmlDoc.importNode(discovery, true));
+                    this.mergeGeneratedElement(discoveriesSection, discovery, xmlDoc, globalIdRegistry, 'discovery');
                 });
             }
             
-            // Add Monitors (should come after Discoveries, before Rules)
+            // Add Monitors
             const newMonitors = tempDoc.querySelectorAll('Monitors > *');
             if (newMonitors.length > 0) {
-                if (!monitorsSection) {
-                    monitorsSection = xmlDoc.createElement('Monitors');
-                    // Re-query to get updated positions
-                    discoveriesSection = monitoringSection.querySelector('Discoveries');
-                    rulesSection = monitoringSection.querySelector('Rules');
-                    
-                    if (rulesSection) {
-                        // Insert before Rules
-                        monitoringSection.insertBefore(monitorsSection, rulesSection);
-                    } else if (discoveriesSection) {
-                        // Insert after Discoveries
-                        if (discoveriesSection.nextSibling) {
-                            monitoringSection.insertBefore(monitorsSection, discoveriesSection.nextSibling);
-                        } else {
-                            monitoringSection.appendChild(monitorsSection);
-                        }
-                    } else {
-                        monitoringSection.appendChild(monitorsSection);
-                    }
-                }
+                monitorsSection = this.ensureSchemaContainer(monitoringSection, 'Monitors', monitoringOrder, xmlDoc);
                 newMonitors.forEach(monitor => {
-                    monitorsSection.appendChild(xmlDoc.importNode(monitor, true));
+                    this.mergeGeneratedElement(
+                        monitorsSection,
+                        monitor,
+                        xmlDoc,
+                        globalIdRegistry,
+                        'monitor',
+                        monitorsElementOrder
+                    );
                 });
             }
             
-            // Add Rules (should come last)
+            // Rules precede monitors in the Management Pack schema.
             const newRules = tempDoc.querySelectorAll('Rules > *');
             if (newRules.length > 0) {
-                if (!rulesSection) {
-                    rulesSection = xmlDoc.createElement('Rules');
-                    // Always append at end
-                    monitoringSection.appendChild(rulesSection);
-                }
+                rulesSection = this.ensureSchemaContainer(monitoringSection, 'Rules', monitoringOrder, xmlDoc);
                 newRules.forEach(rule => {
-                    rulesSection.appendChild(xmlDoc.importNode(rule, true));
+                    this.mergeGeneratedElement(rulesSection, rule, xmlDoc, globalIdRegistry, 'rule');
                 });
             }
         }
@@ -2595,41 +3295,25 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
         if (presentation) {
             const tempDoc = new DOMParser().parseFromString(`<Presentation>${presentation}</Presentation>`, 'text/xml');
             
-            // Get or create Presentation section
-            let presentationSection = xmlDoc.querySelector('Presentation');
-            if (!presentationSection) {
-                presentationSection = xmlDoc.createElement('Presentation');
-                const monitoring = xmlDoc.querySelector('Monitoring');
-                if (monitoring && monitoring.nextSibling) {
-                    monitoring.parentNode.insertBefore(presentationSection, monitoring.nextSibling);
-                } else {
-                    xmlDoc.querySelector('ManagementPack').appendChild(presentationSection);
-                }
-            }
+            const presentationSection = this.ensureSchemaContainer(root, 'Presentation', rootOrder, xmlDoc);
             
             // Add StringResources
             const newStringResources = tempDoc.querySelectorAll('StringResources > *');
             if (newStringResources.length > 0) {
-                let stringResourcesSection = presentationSection.querySelector('StringResources');
-                if (!stringResourcesSection) {
-                    stringResourcesSection = xmlDoc.createElement('StringResources');
-                    presentationSection.appendChild(stringResourcesSection);
-                }
+                const stringResourcesSection = this.ensureSchemaContainer(
+                    presentationSection, 'StringResources', presentationOrder, xmlDoc
+                );
                 newStringResources.forEach(sr => {
-                    stringResourcesSection.appendChild(xmlDoc.importNode(sr, true));
+                    this.mergeGeneratedElement(stringResourcesSection, sr, xmlDoc, globalIdRegistry, 'string resource');
                 });
             }
             
             // Add Views (if any)
             const newViews = tempDoc.querySelectorAll('Views > *');
             if (newViews.length > 0) {
-                let viewsSection = presentationSection.querySelector('Views');
-                if (!viewsSection) {
-                    viewsSection = xmlDoc.createElement('Views');
-                    presentationSection.appendChild(viewsSection);
-                }
+                const viewsSection = this.ensureSchemaContainer(presentationSection, 'Views', presentationOrder, xmlDoc);
                 newViews.forEach(view => {
-                    viewsSection.appendChild(xmlDoc.importNode(view, true));
+                    this.mergeGeneratedElement(viewsSection, view, xmlDoc, globalIdRegistry, 'view');
                 });
             }
         }
@@ -2640,38 +3324,26 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
             const newDisplayStrings = tempDoc.querySelectorAll('DisplayString');
             
             if (newDisplayStrings.length > 0) {
-                let languagePacksSection = xmlDoc.querySelector('LanguagePacks');
-                if (!languagePacksSection) {
-                    languagePacksSection = xmlDoc.createElement('LanguagePacks');
-                    xmlDoc.querySelector('ManagementPack').appendChild(languagePacksSection);
-                }
+                const languagePacksSection = this.ensureSchemaContainer(
+                    root, 'LanguagePacks', rootOrder, xmlDoc
+                );
                 
-                let langPack = languagePacksSection.querySelector('LanguagePack[ID="ENU"]');
-                if (!langPack) {
-                    langPack = xmlDoc.createElement('LanguagePack');
-                    langPack.setAttribute('ID', 'ENU');
-                    langPack.setAttribute('IsDefault', 'true');
-                    languagePacksSection.appendChild(langPack);
-                }
+                const langPack = this.ensureSingleDefaultLanguagePack(languagePacksSection, xmlDoc);
                 
-                let displayStringsSection = langPack.querySelector('DisplayStrings');
-                if (!displayStringsSection) {
-                    displayStringsSection = xmlDoc.createElement('DisplayStrings');
-                    langPack.appendChild(displayStringsSection);
-                }
+                const displayStringsSection = this.ensureSchemaContainer(
+                    langPack, 'DisplayStrings', languagePackOrder, xmlDoc
+                );
                 
                 newDisplayStrings.forEach(ds => {
-                    displayStringsSection.appendChild(xmlDoc.importNode(ds, true));
+                    this.mergeDisplayString(displayStringsSection, ds, xmlDoc);
                 });
             }
         }
         
-        // Serialize and return
-        const serializer = new XMLSerializer();
-        let xmlString = serializer.serializeToString(xmlDoc);
-        
-        // Format the XML nicely
-        return this.formatXML(xmlString);
+        // XMLSerializer preserves existing text-node values. Do not run imported MPs
+        // through the regex formatter: it treats script lines as markup indentation and
+        // can alter PowerShell here-strings and shell heredocs.
+        return new XMLSerializer().serializeToString(xmlDoc);
     }
 
     formatXML(xml) {
@@ -2702,6 +3374,7 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
     }
 
     generateNewMPXML() {
+        this.assertComponentCompatibility();
         const { companyId, appName, version, description } = this.mpData.basicInfo;
         const mpId = `${companyId}.${appName}`;
         
@@ -2714,7 +3387,7 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
             const fragment = this.fragmentLibrary[discoveryType];
             if (fragment && fragment.template) {
                 const processedFragment = this.processFragmentTemplate(discoveryType, fragment.template);
-                allFragments.push(processedFragment);
+                allFragments.push({ xml: processedFragment, component: fragment.name || discoveryType });
             }
         }
         
@@ -2727,7 +3400,10 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
                 if (fragment && fragment.template) {
                     const processedFragment = this.processFragmentTemplate(instanceId, fragment.template, monitorType);
                     if (processedFragment && processedFragment.trim().length > 0) {
-                        allFragments.push(processedFragment);
+                        allFragments.push({
+                            xml: processedFragment,
+                            component: `${fragment.name || monitorType} (${instanceId})`
+                        });
                     }
                 } else {
                     console.error('No template found for monitor:', monitorType);
@@ -2742,7 +3418,7 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
                 if (fragment && fragment.template) {
                     const processedFragment = this.processFragmentTemplate(ruleType, fragment.template);
                     if (processedFragment && processedFragment.trim().length > 0) {
-                        allFragments.push(processedFragment);
+                        allFragments.push({ xml: processedFragment, component: fragment.name || ruleType });
                     }
                 } else {
                     console.error('No template found for rule:', ruleType);
@@ -2750,17 +3426,21 @@ Once you complete Step 1, the preview will show the actual XML structure.`;
             });
         }
         
+        // Validate all fragments together before assembly so duplicate IDs cannot be
+        // hidden by separate component containers.
+        this.validateGeneratedFragments(allFragments);
+
         // Extract sections from fragments and combine them
         const { typeDefinitions, monitoring, presentation, languagePacks } = this.extractAndCombineSections(allFragments);
         
         // Build references
-        let references = this.generateReferences();
+        let references = this.generateReferences(allFragments);
         
         // Check if any rules are selected - if so, skip Description
         const hasAnyRule = this.mpData.selectedComponents.rules && this.mpData.selectedComponents.rules.length > 0;
         const includeDescription = !hasAnyRule && description;
         
-        return `<?xml version="1.0" encoding="utf-8"?>
+        const xml = `<?xml version="1.0" encoding="utf-8"?>
 <ManagementPack ContentReadable="true" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
   <Manifest>
     <Identity>
@@ -2780,6 +3460,7 @@ ${monitoring}
   ${presentation ? `<Presentation>\n${presentation}\n  </Presentation>` : ''}
 ${languagePacks ? `${languagePacks}` : ''}
 </ManagementPack>`;
+        return this.finalizeGeneratedManagementPack(xml);
     }
 
     extractAndCombineSections(fragments) {
@@ -2792,7 +3473,8 @@ ${languagePacks ? `${languagePacks}` : ''}
         let displayStrings = [];
         let views = [];
         
-        fragments.forEach((fragmentXml, index) => {
+        fragments.forEach((fragment, index) => {
+            const fragmentXml = typeof fragment === 'string' ? fragment : fragment.xml;
             if (!fragmentXml || fragmentXml.trim().length === 0) {
                 console.error('Fragment', index, 'is empty or null');
                 return;
@@ -2863,6 +3545,22 @@ ${languagePacks ? `${languagePacks}` : ''}
             }
         });
         
+        const sortByElementOrder = (definitions, order) => definitions.sort((left, right) => {
+            const leftName = left.match(/^\s*<([A-Za-z0-9_:.-]+)/)?.[1] || '';
+            const rightName = right.match(/^\s*<([A-Za-z0-9_:.-]+)/)?.[1] || '';
+            const leftIndex = order.indexOf(leftName);
+            const rightIndex = order.indexOf(rightName);
+            return (leftIndex === -1 ? order.length : leftIndex) -
+                (rightIndex === -1 ? order.length : rightIndex);
+        });
+        sortByElementOrder(moduleTypes, [
+            'DataSourceModuleType',
+            'ProbeActionModuleType',
+            'ConditionDetectionModuleType',
+            'WriteActionModuleType'
+        ]);
+        sortByElementOrder(monitors, ['AggregateMonitor', 'UnitMonitor', 'DependencyMonitor']);
+
         // Build combined sections
         let combinedTypeDefinitions = '';
         let typeDefSections = [];
@@ -2898,16 +3596,16 @@ ${discoveries.map(disc => '      ' + disc).join('\n')}
     </Discoveries>`);
         }
         
-        if (monitors.length > 0) {
-            monitoringSections.push(`    <Monitors>
-${monitors.map(mon => '      ' + mon).join('\n')}
-    </Monitors>`);
-        }
-        
         if (rules.length > 0) {
             monitoringSections.push(`    <Rules>
 ${rules.map(rule => '      ' + rule).join('\n')}
     </Rules>`);
+        }
+
+        if (monitors.length > 0) {
+            monitoringSections.push(`    <Monitors>
+${monitors.map(mon => '      ' + mon).join('\n')}
+    </Monitors>`);
         }
         
         combinedMonitoring = monitoringSections.join('\n');
@@ -2974,73 +3672,176 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
         return serializer.serializeToString(node);
     }
 
-    generateReferences() {
-        let refs = [
-            `      <Reference Alias="System">
-        <ID>System.Library</ID>
-        <Version>7.5.8501.0</Version>
-        <PublicKeyToken>31bf3856ad364e35</PublicKeyToken>
-      </Reference>`,
-            `      <Reference Alias="Windows">
-        <ID>Microsoft.Windows.Library</ID>
-        <Version>7.5.8501.0</Version>
-        <PublicKeyToken>31bf3856ad364e35</PublicKeyToken>
-      </Reference>`,
-            `      <Reference Alias="Health">
-        <ID>System.Health.Library</ID>
-        <Version>7.0.8437.0</Version>
-        <PublicKeyToken>31bf3856ad364e35</PublicKeyToken>
-      </Reference>`
-        ];
-
-        // Add SyntheticTransactions reference if Port Check Monitor is selected
-        const hasPortMonitor = this.mpData.selectedComponents.monitors?.some(
-            monitor => monitor.type === 'port-monitor'
-        );
-        
-        if (hasPortMonitor) {
-            refs.push(`      <Reference Alias="MSSL">
-        <ID>Microsoft.SystemCenter.SyntheticTransactions.Library</ID>
-        <Version>7.5.8501.0</Version>
-        <PublicKeyToken>31bf3856ad364e35</PublicKeyToken>
-      </Reference>`);
+    collectRequiredReferenceAliases(xml, component = 'generated component') {
+        const doc = new DOMParser().parseFromString(xml, 'text/xml');
+        const parserError = doc.querySelector('parsererror');
+        if (parserError) {
+            throw new Error(`Cannot determine Management Pack references for ${component}: fragment XML is invalid.`);
         }
 
-        // Add PowerShell Monitoring reference if 3-state monitor is selected
-        const has3StateMonitor = this.mpData.selectedComponents.monitors?.some(
-            monitor => monitor.type === 'powershell-script-monitor-3state'
-        );
-        
-        if (has3StateMonitor) {
-            refs.push(`      <Reference Alias="PowerShellMonitoring">
-        <ID>Community.PowerShellMonitoring</ID>
-        <Version>1.1.1.2</Version>
-        <PublicKeyToken>3aa540324b898d3c</PublicKeyToken>
-      </Reference>`);
+        const aliases = new Set();
+        const aliasQualifiedIdPattern = /\b([A-Za-z_][A-Za-z0-9_]*)![A-Za-z_][A-Za-z0-9_.]*/g;
+        const scomMacroPattern = /\$(?:MPElement|Target|RunAs)\b[^\r\n$]*?\[\s*(?:Name|Type)\s*=\s*(["'])([^"']+)\1\s*\][^\r\n$]*?\$/g;
+        const referenceBearingAttributes = new Set([
+            'AlertMessage',
+            'Base',
+            'ImageID',
+            'MemberMonitor',
+            'ParentFolder',
+            'ParentMonitorID',
+            'RelationshipType',
+            'Target',
+            'Type',
+            'TypeID',
+            'Value'
+        ]);
+        // Management Pack v2 schema types for these elements are alias-qualified
+        // Management Pack element references. Other configuration text is arbitrary.
+        const referenceBearingTextElements = new Set([
+            'InputType',
+            'OutputType',
+            'SchemaType'
+        ]);
+        const addAliases = value => {
+            for (const match of value.matchAll(aliasQualifiedIdPattern)) {
+                aliases.add(match[1]);
+            }
+        };
+        const addMacroAliases = value => {
+            for (const match of value.matchAll(scomMacroPattern)) {
+                addAliases(match[2]);
+            }
+        };
+
+        for (const element of doc.querySelectorAll('*')) {
+            for (const attribute of element.attributes) {
+                if (referenceBearingAttributes.has(attribute.localName)) {
+                    addAliases(attribute.value);
+                }
+            }
+
+            for (const child of element.childNodes) {
+                if (child.nodeType !== 3 && child.nodeType !== 4) continue;
+                const text = child.nodeValue || '';
+                addMacroAliases(text);
+                if (referenceBearingTextElements.has(element.localName)) {
+                    addAliases(text);
+                }
+            }
         }
 
-        // Add Performance Collection references if performance collection rule is selected
-        const hasPerfCollectionRule = this.mpData.selectedComponents.rules?.includes('performance-collection');
-        
-        if (hasPerfCollectionRule) {
-            refs.push(`      <Reference Alias="SC">
-        <ID>Microsoft.SystemCenter.Library</ID>
-        <Version>7.0.8437.0</Version>
-        <PublicKeyToken>31bf3856ad364e35</PublicKeyToken>
-      </Reference>`);
-            refs.push(`      <Reference Alias="Perf">
-        <ID>System.Performance.Library</ID>
-        <Version>7.0.8437.0</Version>
-        <PublicKeyToken>31bf3856ad364e35</PublicKeyToken>
-      </Reference>`);
-            refs.push(`      <Reference Alias="MSDL">
-        <ID>Microsoft.SystemCenter.DataWarehouse.Library</ID>
-        <Version>7.0.8437.0</Version>
-        <PublicKeyToken>31bf3856ad364e35</PublicKeyToken>
-      </Reference>`);
+        return aliases;
+    }
+
+    getReferenceCatalog() {
+        return new Map([
+            ['System', { alias: 'System', id: 'System.Library', version: '7.5.8501.0', token: '31bf3856ad364e35' }],
+            ['Windows', { alias: 'Windows', id: 'Microsoft.Windows.Library', version: '7.5.8501.0', token: '31bf3856ad364e35' }],
+            ['Health', { alias: 'Health', id: 'System.Health.Library', version: '7.0.8437.0', token: '31bf3856ad364e35' }],
+            ['SC', { alias: 'SC', id: 'Microsoft.SystemCenter.Library', version: '7.0.8437.0', token: '31bf3856ad364e35' }],
+            ['Perf', { alias: 'Perf', id: 'System.Performance.Library', version: '7.0.8437.0', token: '31bf3856ad364e35' }],
+            ['MSDL', { alias: 'MSDL', id: 'Microsoft.SystemCenter.DataWarehouse.Library', version: '7.0.8437.0', token: '31bf3856ad364e35' }],
+            ['MSPL', { alias: 'MSPL', id: 'Microsoft.SystemCenter.ProcessMonitoring.Library', version: '7.0.8437.0', token: '31bf3856ad364e35' }],
+            ['MSSL', { alias: 'MSSL', id: 'Microsoft.SystemCenter.SyntheticTransactions.Library', version: '7.5.8501.0', token: '31bf3856ad364e35' }],
+            ['PowerShellMonitoring', { alias: 'PowerShellMonitoring', id: 'Community.PowerShellMonitoring', version: '1.1.1.2', token: '3aa540324b898d3c' }],
+            ['MUL', { alias: 'MUL', id: 'Microsoft.Unix.Library', version: '7.5.1068.0', token: '31bf3856ad364e35' }],
+            ['MSWL', { alias: 'MSWL', id: 'Microsoft.SystemCenter.WSManagement.Library', version: '7.5.1068.0', token: '31bf3856ad364e35' }],
+            ['SNL', { alias: 'SNL', id: 'System.NetworkManagement.Library', version: '7.0.8437.0', token: '31bf3856ad364e35' }]
+        ]);
+    }
+
+    getRequiredReferenceAliases(fragments = []) {
+        const aliases = new Set();
+
+        for (const fragment of fragments) {
+            const xml = typeof fragment === 'string' ? fragment : fragment.xml;
+            const component = typeof fragment === 'string' ? 'generated component' : fragment.component;
+            for (const alias of this.collectRequiredReferenceAliases(xml, component)) {
+                aliases.add(alias);
+            }
         }
 
-        return refs.join('\n');
+        return [...aliases].sort();
+    }
+
+    getRequiredReferenceSpecs(fragments = []) {
+        const catalog = this.getReferenceCatalog();
+        return this.getRequiredReferenceAliases(fragments).map(alias => {
+            const spec = catalog.get(alias);
+            if (!spec) {
+                throw new Error(`Generated content requires unknown Management Pack reference alias "${alias}".`);
+            }
+            return spec;
+        });
+    }
+
+    renderReference(spec) {
+        return `      <Reference Alias="${spec.alias}">
+        <ID>${spec.id}</ID>
+        <Version>${spec.version}</Version>
+        <PublicKeyToken>${spec.token}</PublicKeyToken>
+      </Reference>`;
+    }
+
+    mergeRequiredReferences(xmlDoc, fragments) {
+        const aliases = this.getRequiredReferenceAliases(fragments);
+        if (aliases.length === 0) return;
+
+        const manifest = xmlDoc.querySelector('Manifest');
+        if (!manifest) throw new Error('Imported Management Pack is missing its Manifest.');
+
+        let references = manifest.querySelector(':scope > References');
+        const catalog = this.getReferenceCatalog();
+
+        for (const alias of aliases) {
+            const matches = references
+                ? [...references.querySelectorAll(`:scope > Reference[Alias="${alias}"]`)]
+                : [];
+            if (matches.length > 0) {
+                const ids = new Set(matches.map(match => match.querySelector('ID')?.textContent.trim()).filter(Boolean));
+                if (ids.size !== 1 || matches.some(match => !match.querySelector('ID')?.textContent.trim())) {
+                    throw new Error(`Imported Management Pack declares reference alias ${alias} inconsistently.`);
+                }
+
+                const existingId = [...ids][0];
+                const knownSpec = catalog.get(alias);
+                if (knownSpec && existingId !== knownSpec.id) {
+                    throw new Error(`Imported Management Pack already uses reference alias ${alias} for ${existingId}; generated content requires ${knownSpec.id}.`);
+                }
+                matches.slice(1).forEach(duplicate => duplicate.remove());
+                continue;
+            }
+
+            const spec = catalog.get(alias);
+            if (!spec) {
+                throw new Error(`Generated content requires unknown Management Pack reference alias "${alias}", and the imported Management Pack does not declare it.`);
+            }
+
+            if (!references) {
+                references = xmlDoc.createElement('References');
+                const name = manifest.querySelector(':scope > Name');
+                if (name?.nextSibling) {
+                    manifest.insertBefore(references, name.nextSibling);
+                } else {
+                    manifest.appendChild(references);
+                }
+            }
+
+            const reference = xmlDoc.createElement('Reference');
+            reference.setAttribute('Alias', spec.alias);
+            for (const [name, value] of [['ID', spec.id], ['Version', spec.version], ['PublicKeyToken', spec.token]]) {
+                const child = xmlDoc.createElement(name);
+                child.textContent = value;
+                reference.appendChild(child);
+            }
+            references.appendChild(reference);
+        }
+    }
+
+    generateReferences(fragments) {
+        return this.getRequiredReferenceSpecs(fragments)
+            .map(spec => this.renderReference(spec))
+            .join('\n');
     }
 
     generateTypeDefinitions() {
@@ -3067,14 +3868,14 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
             sections.push(this.generateDiscoverySection());
         }
 
-        // Generate Monitors
-        if (this.mpData.selectedComponents.monitors && this.mpData.selectedComponents.monitors.length > 0) {
-            sections.push(this.generateMonitorsSection());
-        }
-
         // Generate Rules
         if (this.mpData.selectedComponents.rules && this.mpData.selectedComponents.rules.length > 0) {
             sections.push(this.generateRulesSection());
+        }
+
+        // Generate Monitors
+        if (this.mpData.selectedComponents.monitors && this.mpData.selectedComponents.monitors.length > 0) {
+            sections.push(this.generateMonitorsSection());
         }
 
         return sections.join('\n');
@@ -3118,6 +3919,15 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
         }
         
         const config = this.mpData.configurations[componentType] || {};
+        this.validateLinuxDiscoveryConfiguration(componentType, config);
+        const configuredFragment = this.fragmentLibrary[baseMonitorType || componentType];
+        for (const field of configuredFragment?.fields || []) {
+            if (!field.required || field.type !== 'textarea') continue;
+            const value = config[field.id] !== undefined ? config[field.id] : (field.value || '');
+            if (typeof value !== 'string' || value.trim().length === 0) {
+                throw new Error(`${field.label} is required and cannot contain only whitespace.`);
+            }
+        }
         
         // Get target class from discovery configuration if not in current component
         const discoveryType = this.mpData.selectedComponents.discovery;
@@ -3179,7 +3989,41 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
             console.log('Processing script-discovery template with config:', config);
             console.log('scriptBody value:', config.scriptBody || config.scriptbody || '(not found)');
         }
-        
+
+        // Linux Shell Script Discovery / NFS Mount Discovery: derive safe class property
+        // identifiers (these become XML Property ID attributes AND PowerShell property
+        // names, so they must be valid identifiers, not just XML-escaped text) and pick
+        // the correct Unix/Linux probe action module based on the "privileged" toggle.
+        const sanitizeIdentifier = (raw, fallback) => {
+            let v = (raw || '').toString().trim().replace(/[^A-Za-z0-9_]/g, '');
+            if (!v || /^[0-9]/.test(v)) v = fallback;
+            return v;
+        };
+        let linuxPropertyNames = [
+            sanitizeIdentifier(config.keyPropertyName || config.keypropertyname, 'InstanceKey'),
+            sanitizeIdentifier(config.property2Name || config.property2name, 'Property2'),
+            sanitizeIdentifier(config.property3Name || config.property3name, 'Property3'),
+            sanitizeIdentifier(config.property4Name || config.property4name, 'Property4')
+        ];
+        // Guard against duplicate property IDs (e.g. user renames two fields to the same
+        // value), which would otherwise produce invalid/duplicate-attribute MP XML.
+        const seenLinuxPropertyNames = new Set();
+        linuxPropertyNames = linuxPropertyNames.map((name) => {
+            let candidate = name;
+            let suffix = 2;
+            while (seenLinuxPropertyNames.has(candidate.toLowerCase())) {
+                candidate = `${name}${suffix}`;
+                suffix++;
+            }
+            seenLinuxPropertyNames.add(candidate.toLowerCase());
+            return candidate;
+        });
+        const [safeKeyPropertyName, safeProperty2Name, safeProperty3Name, safeProperty4Name] = linuxPropertyNames;
+        const isPrivilegedLinuxProbe = (config.privileged || '').toString().trim().toLowerCase() === 'yes';
+        const linuxProbeActionTypeId = isPrivilegedLinuxProbe
+            ? 'MUL!Microsoft.Unix.WSMan.Invoke.Privileged.ProbeAction'
+            : 'MUL!Microsoft.Unix.WSMan.Invoke.ProbeAction';
+
         // Create replacement map
         // Security: Apply XML encoding to all user-provided values
         const replacements = {
@@ -3263,7 +4107,14 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
             '##LogName2##': this.escapeXml(config.logName2 || config.logname2 || 'Application'),
             '##EventSource1##': this.escapeXml(config.eventSource1 || config.eventsource1 || ''),
             '##EventSource2##': this.escapeXml(config.eventSource2 || config.eventsource2 || ''),
-            '##IntervalSeconds##': config.intervalSeconds || config.intervalseconds || '300'
+            '##IntervalSeconds##': config.intervalSeconds || config.intervalseconds || '300',
+            // Linux Shell Script Discovery / NFS Mount Discovery placeholders
+            '##ParsingScript##': this.escapeXml(config.parsingScript || config.parsingscript || '# Enter your PowerShell parsing script here'),
+            '##KeyPropertyName##': safeKeyPropertyName,
+            '##Property2Name##': safeProperty2Name,
+            '##Property3Name##': safeProperty3Name,
+            '##Property4Name##': safeProperty4Name,
+            '##ProbeActionTypeID##': linuxProbeActionTypeId
         };
 
         // FAILSAFE: If intervalSeconds is not in config, try to read it directly from the DOM
@@ -3274,10 +4125,27 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
             }
         }
 
-        // Replace all placeholders in the template
+        // Replace all placeholders in the template.
+        // Run the substitution loop twice: some pre-filled defaults (e.g. NFS parsing
+        // scripts) legitimately contain placeholder tokens such as ##ClassID## that only
+        // exist in the template text AFTER an earlier-processed key (e.g. ##ParsingScript##)
+        // has already inserted them. A single pass would leave those nested tokens
+        // unresolved; a second, idempotent pass resolves them without affecting templates
+        // that don't have this nesting (nothing left to replace = no-op).
+        //
+        // IMPORTANT: replacement values are passed via a replacer FUNCTION, not a plain
+        // string. String.prototype.replace() treats special sequences like $&, $`, $',
+        // and $1-$99 in a *string* replacement as pattern references. PowerShell script
+        // content (and XML-escaped script content, which turns quotes/angle-brackets
+        // into &quot;/&lt;/&gt; sequences beginning with "&") frequently contains a "$"
+        // immediately followed by one of these trigger characters, which previously
+        // caused literal placeholder text or matched substrings to leak into generated
+        // XML. A replacer function always inserts its return value verbatim.
         let processedTemplate = template;
-        for (const [placeholder, value] of Object.entries(replacements)) {
-            processedTemplate = processedTemplate.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), value);
+        for (let pass = 0; pass < 2; pass++) {
+            for (const [placeholder, value] of Object.entries(replacements)) {
+                processedTemplate = processedTemplate.replace(new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), () => value);
+            }
         }
         
         // Special handling: Replace script content in <ScriptBody> tags
@@ -3288,14 +4156,14 @@ ${displayStrings.map(str => '        ' + str).join('\n')}
             if (processedTemplate.includes('# Begin MAIN script section') && processedTemplate.includes('# End MAIN script section')) {
                 processedTemplate = processedTemplate.replace(
                     /(# Begin MAIN script section\s*#=+\s*)([\s\S]*?)(\s*#=+\s*# End MAIN script section)/,
-                    `$1\n${scriptBodyContent}\n$3`
+                    (_match, prefix, _existingScript, suffix) => `${prefix}\n${scriptBodyContent}\n${suffix}`
                 );
             }
             // For discoveries: Replace entire ScriptBody content
             else {
                 processedTemplate = processedTemplate.replace(
                     /<ScriptBody>[\s\S]*?<\/ScriptBody>/g,
-                    `<ScriptBody>${scriptBodyContent}</ScriptBody>`
+                    () => `<ScriptBody>${scriptBodyContent}</ScriptBody>`
                 );
             }
         }
@@ -3601,7 +4469,7 @@ function updateDownloadButtons() {
     if (allRequiredFieldsFilled) {
         const requiredInputs = document.querySelectorAll('#component-configs input[required], #component-configs select[required], #component-configs textarea[required]');
         requiredInputs.forEach(input => {
-            if (!input.value || !input.value.trim()) {
+            if (!input.value || !input.value.trim() || !input.checkValidity()) {
                 allRequiredFieldsFilled = false;
             }
         });

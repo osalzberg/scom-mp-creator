@@ -1247,3 +1247,22 @@
     color: #e2e8f0;
     font-weight: 600;
 }
+.compatibility-notice {
+    margin: 0 0 20px;
+    padding: 14px 16px;
+    border: 1px solid #f59e0b;
+    border-radius: 8px;
+    background: #fffbeb;
+    color: #92400e;
+}
+
+.component-card--disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    filter: grayscale(0.35);
+}
+
+.component-card--disabled:hover {
+    transform: none;
+    box-shadow: none;
+}

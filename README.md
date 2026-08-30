@@ -6,7 +6,7 @@ A professional web-based tool for creating System Center Operations Manager (SCO
 
 ### Interactive MP Creator Wizard
 - **6-Step Progressive Interface**: Guided workflow from basic info to final generation
-- **Discovery Methods**: Registry keys, WMI queries, services, scripts, and more
+- **Discovery Methods**: Registry keys, WMI queries, services, scripts, Linux/Unix shell scripts (with an NFS mount discovery starter), and more
 - **Health Monitors**: Service, performance, event log, script, and port monitors
 - **Data Collection Rules**: Performance counters, event alerts, and custom scripts
 - **Advanced Components**: Groups, tasks, views, and recovery actions
@@ -101,6 +101,10 @@ Choose how SCOM will discover your application:
 - **WMI Query**: Use WMI to discover components
 - **Script Discovery**: Custom PowerShell logic
 - **Service Discovery**: Discover based on Windows services
+- **Linux Shell Script Discovery**: Run a shell command on a Unix/Linux computer (via the Microsoft Unix/Linux/SCX management pack's WSMan probe) and parse its output into one or more discovered class instances. Supports single- or multi-instance discovery, an optional privileged (elevated) probe action, schedule/timeout values from 1 through 2147483647 seconds, and customizable property names that remain synchronized with the starter parsing script. The generic starter enumerates immediate directory children using quoted POSIX shell globs rather than parsing `ls`; names and paths are UTF-8 hex encoded for transport, preserving spaces, tabs, pipes, and arrow text. Symlinks—including symlinked directories—are included as `symlink` objects and are never traversed. The generated workflow passes `StdOut`, `ReturnCode`, and `StdErr` to a mandatory safety wrapper: nonzero or invalid return codes are logged as errors and fail without emitting discovery data, while parser output is buffered until parsing finishes successfully. Custom parsers should throw on malformed input; this prevents a partial snapshot from removing previously discovered instances. A zero return code with no records intentionally emits a successful empty snapshot. Shell commands and parsing scripts preserve their exact leading/trailing whitespace through navigation and XML generation. Requires the target computer to already be discovered by the Microsoft Unix/Linux agent (`Microsoft.Unix.Library` / `Microsoft.SystemCenter.WSManagement.Library` management packs). The current monitor, Windows event/performance, and PowerShell rule templates are disabled for Linux discovery because their modules cannot target Unix/Linux-hosted objects; the independently targeted SNMP trap rule remains available and adds its required network-management reference automatically.
+- **NFS Mount Discovery (Linux)**: A ready-to-use starter built on Linux Shell Script Discovery, pre-filled with a `/proc/mounts` command and parsing script that discovers each `nfs` or `nfs4` client mount as its own instance (mount point, remote export path, filesystem type, and mount options as properties), hosted under the Linux computer. It transports fields as tab-separated records, preserving legal pipe characters in paths, and decodes standard `/proc/mounts` octal escapes only after splitting each record. The starter validates the complete output before creating discovery data, so a malformed row—including one after valid rows—fails safely rather than publishing a partial destructive snapshot. Linux discovery keys are case-sensitive, so paths such as `/mnt/Data` and `/mnt/data` remain distinct objects. Works out of the box, or customize the command/parsing script/property names for your environment.
+- **Imported MP localization**: Generated display strings are merged into the ENU language pack without replacing an imported default language. If the imported MP has no default language, ENU is selected deterministically as the sole default.
+- **Safe imported MP merging**: Generated sections follow the Operations Manager SDK Management Pack v2 schema order, existing script and command text is serialized without whitespace-changing pretty printing, and references are derived from parsed SCOM reference-bearing attributes, schema-typed text elements, and quoted `Name`/`Type` operands in `$MPElement`, `$Target`, or `$RunAs` macros. Macro references inside scripts are recognized, while ordinary exclamation text such as `Ready!` or `Payment!Failed` in scripts, configuration, descriptions, comments, and display strings is ignored. Generated content may reuse a custom alias already declared consistently by an imported MP; the built-in catalog is used only to add missing aliases, and known aliases mapped to the wrong library are rejected.
 - **Skip Discovery**: Target existing SCOM classes
 
 ### Step 3: Health Monitors
@@ -201,7 +205,7 @@ For questions, issues, or feature requests:
 - **Languages**: HTML, CSS, JavaScript
 - **Features**: 20+ component types
 - **Wizard Steps**: 6 progressive steps
-- **Discovery Methods**: 6 options
+- **Discovery Methods**: 8 options
 - **Monitor Types**: 6 varieties
 - **Rule Types**: 4 categories
 
